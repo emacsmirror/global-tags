@@ -1,0 +1,6 @@
+== global.el
+
+=== Purpose
+
+- Provide a (unit-) testeable Emacs Lisp API that wraps `global` binary calls.
+- Integrate to Emacs using aformentioned API with `project.el` and `xref.el`
