@@ -29,9 +29,11 @@
 
 ;;; Code:
 
+;;; Static definitions
 (defgroup global nil "GNU global integration"
   :group 'tools)
 
+(require 'cl-lib)
 ;;;; utility functions:
 
 (defun global--command-flag (command)
@@ -51,10 +53,10 @@ Flags are not contracted."
 
 (defun global--option-requires-extra-flag? (option)
   "Whether command line OPTION requires an extra flag."
-  (if (find option '(color encode-path from-here gtagsconf gtagslabel file-list
-                           match-part ;; 'nearness is handled outside
-                           path-style result single-update
-                           scope))
+  (if (cl-find option '(color encode-path from-here gtagsconf gtagslabel file-list
+			      match-part ;; 'nearness is handled outside
+			      path-style result single-update
+			      scope))
       t))
 
 (defun global--option-sans-extra-flag? (option)
@@ -74,9 +76,11 @@ Flags are not contracted.  Result is a list of arguments."
     (`(nil ,actualflag ,value) ;; --some-param some-value
      (list (format "--%s" (symbol-name actualflag))
            (progn
-             (assert (stringp value)
-                     (format "extra parameter for %s must be string, found " value))
+             (cl-assert (stringp value)
+			(format "extra parameter for %s must be string, found "
+			   value))
              value)))
     (_ (error "Unknown option combination: %s %s" (symbol-name flag) value))))
+
 (provide 'global)
 ;;; global.el ends here
