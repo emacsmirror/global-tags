@@ -2,5 +2,11 @@
 
 === Purpose
 
-- Provide a (unit-) testeable Emacs Lisp API that wraps `global` binary calls.
-- Integrate to Emacs using aformentioned API with `project.el` and `xref.el`
+* Provide a (unit-) testeable Emacs Lisp API that wraps `global` binary calls.
+* Optional integration to Emacs using aformentioned API with `project.el` and `xref.el`
+
+=== Related projects
+
+* https://github.com/syohex/emacs-counsel-gtags[counsel-gtags]: unmaintained and non-re-usable https://github.com/abo-abo/swiper[counsel] interface. (my maintained fork https://github.com/FelipeLema/emacs-counsel-gtags/[here])
+* https://github.com/leoliu/ggtags[ggtags]: fend off `compilation-mode` to get things running. Not a re-usable library
+* https://github.com/dedi/gxref/[gxref]: unmaintaned
