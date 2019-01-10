@@ -12,10 +12,4 @@ test: clean
 	       -l tests/global-tests.el \
 	       -f buttercup-run-discover
 
-compile:
-	$(EMACS) -Q -batch -f batch-byte-compile counsel-gtags.el
-
-clean:
-	rm -f f.elc
-
 .PHONY:	all test
