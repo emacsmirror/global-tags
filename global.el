@@ -6,16 +6,16 @@
 ;; Keywords:
 
 ;; This program is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
+;; it under the terms of the GNU Lesser General Public License as published by
 ;; the Free Software Foundation, either version 3 of the License, or
 ;; (at your option) any later version.
 
 ;; This program is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
+;; GNU Lesser General Public License for more details.
 
-;; You should have received a copy of the GNU General Public License
+;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; WIP:
@@ -62,7 +62,7 @@ Flags are not contracted."
 (defun global--option-sans-extra-flag? (option)
   "Whether command line OPTION does not require an extra flag."
   (if (not (eq option 'nearness));; 'nearness is handled outside
-      (not (global--option-sans-extra-flag? option))))
+      (not (global--option-requires-extra-flag? option))))
 
 (defun global--option-flag (flag &optional value)
   "Get command line option flag for FLAG as string-or-nil.
@@ -71,9 +71,11 @@ When FLAG requires an extra parameter, this is passed in VALUE.
 Flags are not contracted.  Result is a list of arguments."
   (pcase (list (global--option-sans-extra-flag? flag) flag value)
     (`(,_ 'nearness  ,start) (error "nearness option not implemented"))
-    (`(t ,actualflag nil) ;; no option
+    (`(t ;; no extra option
+       ,actualflag nil) 
      (list (format "--%s" (symbol-name actualflag))))
-    (`(nil ,actualflag ,value) ;; --some-param some-value
+    (`(nil ;; --some-param some-value
+       ,actualflag ,value)
      (list (format "--%s" (symbol-name actualflag))
            (progn
              (cl-assert (stringp value)
