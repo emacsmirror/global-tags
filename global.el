@@ -39,7 +39,7 @@
 (defun global--command-flag (command)
   "Get command line flag for COMMAND as string-or-nil.
 
-Flags are not contracted. Returned as list to compose command."
+Flags are not contracted.  Returned as list to compose command."
   (pcase command
     (`tag nil)
     ((or `completion `file `grep `idutils `path `print-dbpath `update)
@@ -68,16 +68,27 @@ Flags are not contracted.  Result is a list of arguments."
     (`(,_ nearness  ,start) (list (format "--nearness=%s" start)))
     (`(t ;; no extra option
        ,actualflag nil)
-     (list (format "--%s" (symbol-name actualflag))))
+     (list (format "--%s" (replace-regexp-in-string "^:"
+					       "" (symbol-name actualflag)))))
     (`(nil ;; --some-param some-value
        ,actualflag ,value)
-     (list (format "--%s" (symbol-name actualflag))
+     (list (format "--%s" (replace-regexp-in-string "^:"
+					       "" (symbol-name actualflag)))
            (progn
              (cl-assert (stringp value)
 			(format "extra parameter for %s must be string, found "
 			   value))
              value)))
     (_ (error "Unknown option combination: %s %s" (symbol-name flag) value))))
+
+(defun global--get-arguments (command &rest flags)
+  "Returns arguments to global as list per COMMAND and flags.
+
+FLAGS must be plist like (global--get-arguments … :absolute :color \"always\")."
+  (append
+   (global--command-flag command)
+   (cl-loop for (key value) on flags
+	    append (global--option-flag key value))))
 
 (provide 'global)
 ;;; global.el ends here
