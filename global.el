@@ -39,16 +39,11 @@
 (defun global--command-flag (command)
   "Get command line flag for COMMAND as string-or-nil.
 
-Flags are not contracted."
+Flags are not contracted. Returned as list to compose command."
   (pcase command
     (`tag nil)
-    (`completion "--completion")
-    (`file "--file")
-    (`grep "--grep")
-    (`idutils "--idutils")
-    (`path "--path")
-    (`print-dbpath "--print-dbpath")
-    (`update "--update")
+    ((or `completion `file `grep `idutils `path `print-dbpath `update)
+     (list (format "--%s" (symbol-name command))))
     (_ (error "Unknown command: %s" (symbol-name command)))))
 
 (defun global--option-requires-extra-flag? (option)
