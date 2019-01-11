@@ -65,9 +65,9 @@ Flags are not contracted. Returned as list to compose command."
 When FLAG requires an extra parameter, this is passed in VALUE.
 Flags are not contracted.  Result is a list of arguments."
   (pcase (list (global--option-sans-extra-flag? flag) flag value)
-    (`(,_ 'nearness  ,start) (error "nearness option not implemented"))
+    (`(,_ nearness  ,start) (list (format "--nearness=%s" start)))
     (`(t ;; no extra option
-       ,actualflag nil) 
+       ,actualflag nil)
      (list (format "--%s" (symbol-name actualflag))))
     (`(nil ;; --some-param some-value
        ,actualflag ,value)

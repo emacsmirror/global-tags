@@ -31,6 +31,9 @@
   (it "commands with no extra flag"
     (expect (global--option-flag 'definition) :to-equal '("--definition"))
     (expect (global--option-flag 'absolute) :to-equal '("--absolute")))
+  (it "nearness"
+    (expect
+     (global--option-flag 'nearness "start") :to-equal '("--nearness=start")))
   (it "tag command has no flag"
     (expect (global--command-flag 'tag) :to-equal '())
     (expect (global--command-flag 'completion) :to-equal '("--completion"))))
