@@ -34,6 +34,13 @@
   :group 'tools)
 
 (require 'cl-lib)
+
+;;;; variables
+
+(defvar global--global-command
+  "global"
+  "Name/path to Global executable.")
+
 ;;;; utility functions:
 
 (defun global--command-flag (command)
@@ -64,22 +71,23 @@ Flags are not contracted.  Returned as list to compose command."
 
 When FLAG requires an extra parameter, this is passed in VALUE.
 Flags are not contracted.  Result is a list of arguments."
-  (pcase (list (global--option-sans-extra-flag? flag) flag value)
-    (`(,_ nearness  ,start) (list (format "--nearness=%s" start)))
-    (`(t ;; no extra option
-       ,actualflag nil)
-     (list (format "--%s" (replace-regexp-in-string "^:"
-					       "" (symbol-name actualflag)))))
-    (`(nil ;; --some-param some-value
-       ,actualflag ,value)
-     (list (format "--%s" (replace-regexp-in-string "^:"
-					       "" (symbol-name actualflag)))
-           (progn
-             (cl-assert (stringp value)
-			(format "extra parameter for %s must be string, found "
-			   value))
-             value)))
-    (_ (error "Unknown option combination: %s %s" (symbol-name flag) value))))
+  (if (not (null flag))
+      (pcase (list (global--option-sans-extra-flag? flag) flag value)
+	(`(,_ nearness  ,start) (list (format "--nearness=%s" start)))
+	(`(t ;; no extra option
+	   ,actualflag nil)
+	 (list (format "--%s" (replace-regexp-in-string "^:"
+						   "" (symbol-name actualflag)))))
+	(`(nil ;; --some-param some-value
+	   ,actualflag ,value)
+	 (list (format "--%s" (replace-regexp-in-string "^:"
+						   "" (symbol-name actualflag)))
+               (progn
+		 (cl-assert (stringp value)
+			    (format "extra parameter for %s must be string, found "
+			       value))
+		 value)))
+	(_ (error "Unknown option combination: %s %s" (symbol-name flag) value)))))
 
 (defun global--get-arguments (command &rest flags)
   "Returns arguments to global as list per COMMAND and flags.
@@ -89,6 +97,16 @@ FLAGS must be plist like (global--get-arguments … :absolute :color \"always\")
    (global--command-flag command)
    (cl-loop for (key value) on flags
 	    append (global--option-flag key value))))
+
+(defun global--get-as-string (command &rest flags)
+  "Execute global COMMAND with FLAGS.
+
+FLAGS is a plist.  See `global--get-arguments'"
+  (shell-command-to-string
+   (mapconcat #'shell-quote-argument
+	      (append `(,global--global-command)
+		      (global--get-arguments command flags))
+	      " ")))
 
 (provide 'global)
 ;;; global.el ends here

@@ -30,7 +30,8 @@
 (describe "commands and flags"
   (it "commands with no extra flag"
     (expect (global--option-flag 'definition) :to-equal '("--definition"))
-    (expect (global--option-flag 'absolute) :to-equal '("--absolute")))
+    (expect (global--option-flag 'absolute) :to-equal '("--absolute"))
+    )
 
   (it "nearness"
     (expect
@@ -44,7 +45,19 @@
     (expect
      (global--get-arguments 'path :absolute) :to-equal '("--path" "--absolute"))
     (expect (global--get-arguments 'tag :absolute) :to-equal '("--absolute"))
-    ))
+    (expect (global--get-arguments 'print-dbpath) :to-equal '("--print-dbpath")))
+
+  (it "arguments make sense"
+    (expect (global--get-arguments 'print-dbpath nil)
+	    :to-equal
+	    (global--get-arguments 'print-dbpath))
+    (expect (mapconcat #'shell-quote-argument
+		       (append `(,global--global-command)
+			       (global--get-arguments 'print-dbpath))
+		       " ")
+	    :to-equal (format "%s --print-dbpath" global--global-command))
+    (expect
+     (global--get-as-string 'print-dbpath) :to-equal "global: GTAGS not found.\n")))
 
 
 
