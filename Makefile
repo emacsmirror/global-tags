@@ -6,7 +6,7 @@ BEMACS = $(EMACS) -Q -batch
 all: test
 
 # Use LC_ALL=C to avoid locale dependencies in the dates!
-test: clean
+test:
 	LC_ALL=C $(BEMACS) -l tests/setup.el \
 	       -l global.el \
 	       -l tests/global-tests.el \
