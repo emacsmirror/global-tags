@@ -2,8 +2,13 @@
 
 === Purpose
 
-* Provide a (unit-) testeable Emacs Lisp API that wraps `global` binary calls.
-* Optional integration to Emacs using aformentioned API with `project.el` and `xref.el`
+* Provide a (unit-) testeable Emacs Lisp API that wraps `global` binary calls (exposed to developer).
+* Optional integration to Emacs using aformentioned API with `project.el` and `xref.el` (exposed to final user).
+
+=== Secondary purposes
+
+* Integrate to main Emacs branch
+* Do *not* expose `global` to the final user with commands: user should use `project.el` and `xref.el` functions
 
 === Related projects
 
