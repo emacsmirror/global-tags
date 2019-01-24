@@ -102,6 +102,8 @@ FLAGS must be plist like (global--get-arguments … :absolute :color \"always\")
    (cl-loop for (key value) on flags
 	    append (global--option-flag key value))))
 
+;;; Convenience functions (for developers of global.el)
+
 (defun global--get-as-string (command &rest flags)
   "Execute global COMMAND with FLAGS.
 
@@ -112,12 +114,18 @@ FLAGS is a plist.  See `global--get-arguments'"
 		      (global--get-arguments command flags))
 	      " ")))
 
+(defun global--get-dbpath (dir)
+  "Filepath for database from DIR or nil."
+  (let* ((default-directory dir)
+	 (maybe-dbpath (global--get-as-string 'print-dbpath)))
+    (if (file-exists-p maybe-dbpath)
+	maybe-dbpath)))
+
 ;;; project.el integration
 
 (defun global-try-project-root (dir)
   "Project root for DIR if it exists."
-  (if-let* ((default-directory dir)
-	    (dbpath (global--get-as-string 'print-db)))
+  (if-let* ((dbpath (global--get-dbpath dir)))
       (cons 'global dbpath)))
 
 (cl-defmethod project-roots ((project (head global)))

@@ -56,7 +56,9 @@
 		       " ")
 	    :to-equal (format "%s --print-dbpath" global--global-command))
     (expect
-     (global--get-as-string 'print-dbpath) :to-equal "global: GTAGS not found.\n")))
+     (global--get-as-string 'print-dbpath) :to-equal "global: GTAGS not found.\n"))
+  (it "no dbpath"
+    (expect (global--get-dbpath "/") :to-equal nil)))
 
 
 
