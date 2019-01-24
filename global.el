@@ -35,6 +35,7 @@
 
 (require 'cl-lib)
 (require 'project)
+(require 'subr-x)
 
 ;;;; variables
 
