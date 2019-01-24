@@ -34,6 +34,7 @@
   :group 'tools)
 
 (require 'cl-lib)
+(require 'project)
 
 ;;;; variables
 
@@ -65,6 +66,8 @@ Flags are not contracted.  Returned as list to compose command."
   "Whether command line OPTION does not require an extra flag."
   (if (not (eq option 'nearness));; 'nearness is handled outside
       (not (global--option-requires-extra-flag? option))))
+
+;;; API
 
 (defun global--option-flag (flag &optional value)
   "Get command line option flag for FLAG as string-or-nil.
@@ -107,6 +110,44 @@ FLAGS is a plist.  See `global--get-arguments'"
 	      (append `(,global--global-command)
 		      (global--get-arguments command flags))
 	      " ")))
+
+;;; project.el integration
+
+(defun global-try-project-root (dir)
+  "Project root for DIR if it exists."
+  (if-let* ((default-directory dir)
+	    (dbpath (global--get-as-string 'print-db)))
+      (cons 'global dbpath)))
+
+(cl-defmethod project-roots ((project (head global)))
+  "Default implementation.
+
+See `project-roots' for 'transient."
+  (list (cdr project)))
+
+(cl-defmethod project-file-completion-table ((project (head global)) dirs)
+  "Same as generic `project-file-completion-table', but replacing find command."
+  (let ((all-files
+	 (cl-mapcan
+	  (lambda (dir)
+	    (split-string
+	     (let ((default-directory dir))
+	       (global--get-as-string 'path))
+	     "\0" t))
+	  dirs)))
+    (lambda (string pred action)
+      (cond
+       ((eq action 'metadata)
+	'(metadata . ((category . project-file))))
+       (t
+	(complete-with-action action all-files string pred))))))
+
+;; No need to implement unless necessary
+;;(cl-defmethod project-external-roots ((project (head global)))
+;;  )
+;;(cl-defmethod project-files ((project (head global)) &optional dirs)
+;;  )
+;;(cl-defgeneric project-ignores (_project _dir)
 
 (provide 'global)
 ;;; global.el ends here
