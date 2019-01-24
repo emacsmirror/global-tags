@@ -142,7 +142,7 @@ See `project-roots' for 'transient."
 	    (split-string
 	     (let* ((project-root (cdr project))
 		    (default-directory project-root))
-	       (global--get-as-string 'path))
+	       (global--get-as-string 'path :print0))
 	     "\0" t))
 	  dirs)))
     (lambda (string pred action)
