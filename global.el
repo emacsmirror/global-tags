@@ -159,5 +159,20 @@ See `project-roots' for 'transient."
 ;;  )
 ;;(cl-defgeneric project-ignores (_project _dir)
 
+;;; xref.el integration
+
+
+(defun global-xref-backend ()
+  "global backend for Xref."
+  (if (global--get-dbpath default-directory)
+      'global))
+
+;;;; TODO
+;;;; `xref-backend-identifier-at-point',
+;;;; `xref-backend-identifier-completion-table',
+;;;; `xref-backend-definitions'
+;;;; `xref-backend-references',
+;;;; `xref-backend-apropos'
+
 (provide 'global)
 ;;; global.el ends here
