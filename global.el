@@ -94,7 +94,7 @@ Flags are not contracted.  Result is a list of arguments."
 	(_ (error "Unknown option combination: %s %s" (symbol-name flag) value)))))
 
 (defun global--get-arguments (command &rest flags)
-  "Returns arguments to global as list per COMMAND and flags.
+  "Get arguments to global as list per COMMAND and flags.
 
 FLAGS must be plist like (global--get-arguments … :absolute :color \"always\")."
   (append
