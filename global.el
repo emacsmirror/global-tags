@@ -131,7 +131,8 @@ See `project-roots' for 'transient."
 	 (cl-mapcan
 	  (lambda (dir)
 	    (split-string
-	     (let ((default-directory dir))
+	     (let* ((project-root (cdr project))
+		    (default-directory project-root))
 	       (global--get-as-string 'path))
 	     "\0" t))
 	  dirs)))
