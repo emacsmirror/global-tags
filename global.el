@@ -135,7 +135,9 @@ See `project-roots' for 'transient."
   (list (cdr project)))
 
 (cl-defmethod project-file-completion-table ((project (head global)) dirs)
-  "Same as generic `project-file-completion-table', but replacing find command."
+  "Same as generic `project-file-completion-table', but replacing find command.
+
+TODO: cache call (see `tags-completion-table' @ etags.el)"
   (let ((all-files
 	 (cl-mapcan
 	  (lambda (dir)
@@ -161,13 +163,17 @@ See `project-roots' for 'transient."
 
 ;;; xref.el integration
 
-
 (defun global-xref-backend ()
   "global backend for Xref."
   (if (global--get-dbpath default-directory)
       'global))
 
+(cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
+  (if-let ((symbol (thing-at-point 'symbol)))
+      (symbol-name symbol)))
+
 ;;;; TODO
+;;;; cache calls (see `tags-completion-table' @ etags.el)
 ;;;; `xref-backend-identifier-at-point',
 ;;;; `xref-backend-identifier-completion-table',
 ;;;; `xref-backend-definitions'
