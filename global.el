@@ -160,6 +160,15 @@ If inner global command returns non-0, then this function returns nil."
     (if (= command-return-code 0)
 	command-output-str)))
 
+(defun global--get-lines (command &rest flags)
+  "Break global COMMAND FLAGS output into lines.
+
+Adds (:print0) to flags."
+  (split-string
+   (global--get-as-string command (append '(:print0)
+					  flags))
+   "\0" t))
+
 (defun global--get-location (line)
   "Parse location from LINE.
 
@@ -191,15 +200,10 @@ Column is always 0."
   "Get locations according to SYMBOL and KIND.
 
 If KIND is omitted, will do \"tag\" search."
-  (let ((lines (split-string
-		(let* ((project-root (cdr project))
-		       (default-directory project-root))
-		  (global--get-as-string kind
-					 ;; ↓ see `global--get-location'
-					 :result "grep"
-					 :print0
-					 symbol))
-		"\0" t)))
+  (let ((lines (global--get-lines kind
+				  ;; ↓ see `global--get-location'
+				  :result "grep"
+				  symbol)))
     (cl-loop for line in lines
 	     collect (global--get-location line))))
 
@@ -239,11 +243,9 @@ TODO: cache call (see `tags-completion-table' @ etags.el)"
   (let ((all-files
 	 (cl-mapcan
 	  (lambda (dir)
-	    (split-string
-	     (let* ((project-root (cdr project))
-		    (default-directory project-root))
-	       (global--get-as-string 'path :print0))
-	     "\0" t))
+	    (let* ((project-root (cdr project))
+		   (default-directory project-root))
+	      (global--get-lines 'path)))
 	  dirs)))
     (lambda (string pred action)
       (cond
@@ -266,18 +268,20 @@ TODO: cache call (see `tags-completion-table' @ etags.el)"
   (if (global--get-dbpath default-directory)
       'global))
 
-(cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
-  (if-let ((symbol (thing-at-point 'symbol)))
-      (symbol-name symbol)))
-
 (cl-defmethod xref-backend-definitions ((_backend (eql global)) symbol)
   "See `global--get-locations'."
   (global--get-xref-locations symbol))
 
+(cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
+  (if-let ((symbol (thing-at-point 'symbol)))
+      (symbol-name symbol)))
+
+(cl-defmethod xref-backend-identifier-completion-table ((_backend (eql global)))
+  (global--get-lines 'completion))
+
+
 ;;;; TODO
 ;;;; cache calls (see `tags-completion-table' @ etags.el)
-;;;; `xref-backend-identifier-at-point',
-;;;; `xref-backend-identifier-completion-table',
 ;;;; `xref-backend-references',
 ;;;; `xref-backend-apropos'
 
