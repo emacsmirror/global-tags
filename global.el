@@ -270,7 +270,7 @@ TODO: cache call (see `tags-completion-table' @ etags.el)"
 
 (cl-defmethod xref-backend-definitions ((_backend (eql global)) symbol)
   "See `global--get-locations'."
-  (global--get-xref-locations symbol))
+  (global--get-xref-locations :definition symbol))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
   (if-let ((symbol (thing-at-point 'symbol)))
@@ -279,11 +279,14 @@ TODO: cache call (see `tags-completion-table' @ etags.el)"
 (cl-defmethod xref-backend-identifier-completion-table ((_backend (eql global)))
   (global--get-lines 'completion))
 
+(cl-defmethod xref-backend-references ((_backend (eql global)) symbol)
+  (global--get-xref-locations :reference symbol))
+
+(cl-defmethod xref-backend-apropos ((_backend (eql global)) symbol)
+  (global--get-xref-locations 'grep symbol))
 
 ;;;; TODO
 ;;;; cache calls (see `tags-completion-table' @ etags.el)
-;;;; `xref-backend-references',
-;;;; `xref-backend-apropos'
 
 (provide 'global)
 ;;; global.el ends here
