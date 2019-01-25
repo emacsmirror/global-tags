@@ -36,6 +36,7 @@
 (require 'cl-lib)
 (require 'generator)
 (require 'project)
+(require 'rx)
 (require 'subr-x)
 (require 'xref)
 
@@ -144,18 +145,72 @@ If inner global command returns non-0, then this function returns nil."
 	 (program (car program-and-args))
 	 (program-args (cdr program-and-args))
 	 (command-return-code)
-	 (command-output-str (with-output-to-string
-			       (setq command-return-code
-				     (apply (apply-partially
-					     'call-process
-					     program
-					     nil
-					     `(,standard-output nil)
-					     nil
-					     )
-					    program-args)))))
+	 (command-output-str
+	  (with-output-to-string
+	    (setq command-return-code
+		  ;; `call-process', but forwarding program-args
+		  ;; 🙄
+		  (apply (apply-partially
+			  'call-process
+			  program
+			  nil
+			  `(,standard-output nil)
+			  nil)
+			 program-args)))))
     (if (= command-return-code 0)
 	command-output-str)))
+
+(defun global--get-location (line)
+  "Parse location from LINE.
+
+Assumes (:result \"grep\").
+Column is always 0."
+  (save-match-data
+    (if (string-match (rx line-start
+			  (group (+ (any print))) ;; file
+			  ?: ;; separator
+			  (group (+ (any digit))) ;; line
+			  ?: ;; separator
+			  (group (+ (any print))) ;; function
+			  line-end)
+		      line)
+	`((file . ,(match-string 1 line))
+	  (line . ,(string-to-number (match-string 2 line)))
+	  (description . ,(match-string 3 line))
+	  (column . 0)))))
+
+(defun global--as-xref-location (location-description)
+  "Map LOCATION-DESCRIPTION from `global--get-locations' to xref's representation."
+  (let-alist location-description
+    (xref-make .description
+	       (xref-make-file-location .file
+					.line
+					.column))))
+
+(defun global--get-locations (symbol &optional kind)
+  "Get locations according to SYMBOL and KIND.
+
+If KIND is omitted, will do \"tag\" search."
+  (let ((lines (split-string
+		(let* ((project-root (cdr project))
+		       (default-directory project-root))
+		  (global--get-as-string kind
+					 ;; ↓ see `global--get-location'
+					 :result "grep"
+					 :print0
+					 symbol))
+		"\0" t)))
+    (cl-loop for line in lines
+	     collect (global--get-location line))))
+
+(defun global--get-xref-locations (symbol &optional kind)
+  "Get xref locations according to SYMBOL and KIND.
+
+If KIND is omitted, will do \"tag\" search.
+See `global--get-locations'."
+  (if-let ((results (global--get-locations kind symbol)))
+      (cl-loop for result in results
+	       collect (global--as-xref-location result))))
 
 (defun global--get-dbpath (dir)
   "Filepath for database from DIR or nil."
@@ -215,11 +270,14 @@ TODO: cache call (see `tags-completion-table' @ etags.el)"
   (if-let ((symbol (thing-at-point 'symbol)))
       (symbol-name symbol)))
 
+(cl-defmethod xref-backend-definitions ((_backend (eql global)) symbol)
+  "See `global--get-locations'."
+  (global--get-xref-locations symbol))
+
 ;;;; TODO
 ;;;; cache calls (see `tags-completion-table' @ etags.el)
 ;;;; `xref-backend-identifier-at-point',
 ;;;; `xref-backend-identifier-completion-table',
-;;;; `xref-backend-definitions'
 ;;;; `xref-backend-references',
 ;;;; `xref-backend-apropos'
 

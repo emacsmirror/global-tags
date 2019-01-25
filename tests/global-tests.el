@@ -70,6 +70,13 @@
   (it "no dbpath"
     (expect (global--get-dbpath "/") :to-equal nil)))
 
+(describe "internals"
+  (it "parse line"
+    (let-alist (global--get-location "some/file/path/src.cpp:423:static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
+      (expect .description :to-equal "static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
+      (expect .file :to-equal "some/file/path/src.cpp")
+      (expect .line :to-equal 423))))
+
 
 
 (provide 'global-tests)
