@@ -40,6 +40,14 @@
     (expect (global--command-flag 'tag) :to-equal '())
     (expect (global--command-flag 'completion) :to-equal '("--completion")))
 
+  (it "internal parsing"
+    (expect (global--arguments-as-pairs
+	     '(:parameter-with-argument "string")) :to-equal
+	     '((:parameter-with-argument . "string")))
+    (expect (global--arguments-as-pairs
+	     '(:single-parameter)) :to-equal
+	     '((:single-parameter . nil))))
+
   (it "compose commands and flag"
     (expect
      (global--get-arguments 'path :absolute) :to-equal '("--path" "--absolute"))
@@ -56,7 +64,9 @@
 		       " ")
 	    :to-equal (format "%s --print-dbpath" global--global-command))
     (expect
-     (global--get-as-string 'print-dbpath) :to-equal "global: GTAGS not found.\n"))
+     (global--get-as-string 'print-dbpath) :to-equal nil))
+  (it "nil return from invalid command"
+    (expect (global--get-as-string 'file "not-an-existing-file") :to-equal nil))
   (it "no dbpath"
     (expect (global--get-dbpath "/") :to-equal nil)))
 

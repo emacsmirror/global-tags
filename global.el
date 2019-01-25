@@ -34,8 +34,10 @@
   :group 'tools)
 
 (require 'cl-lib)
+(require 'generator)
 (require 'project)
 (require 'subr-x)
+(require 'xref)
 
 ;;;; variables
 
@@ -75,23 +77,50 @@ Flags are not contracted.  Returned as list to compose command."
 
 When FLAG requires an extra parameter, this is passed in VALUE.
 Flags are not contracted.  Result is a list of arguments."
-  (if (not (null flag))
-      (pcase (list (global--option-sans-extra-flag? flag) flag value)
-	(`(,_ nearness  ,start) (list (format "--nearness=%s" start)))
-	(`(t ;; no extra option
-	   ,actualflag nil)
-	 (list (format "--%s" (replace-regexp-in-string "^:"
-						   "" (symbol-name actualflag)))))
-	(`(nil ;; --some-param some-value
-	   ,actualflag ,value)
-	 (list (format "--%s" (replace-regexp-in-string "^:"
-						   "" (symbol-name actualflag)))
-               (progn
-		 (cl-assert (stringp value)
-			    (format "extra parameter for %s must be string, found "
-			       value))
-		 value)))
-	(_ (error "Unknown option combination: %s %s" (symbol-name flag) value)))))
+  (pcase flag
+    ((pred symbolp)
+     (pcase (list (global--option-sans-extra-flag? flag) flag value)
+       (`(,_ nearness  ,start) (list (format "--nearness=%s" start)))
+       (`(t ;; no extra option
+	  ,actualflag nil)
+	(list (format "--%s" (replace-regexp-in-string "^:"
+						  "" (symbol-name actualflag)))))
+       (`(nil ;; --some-param some-value
+	  ,actualflag ,value)
+	(list (format "--%s" (replace-regexp-in-string "^:"
+						  "" (symbol-name actualflag)))
+	      (progn
+		(cl-assert (stringp value)
+			   (format "extra parameter for %s must be string, found "
+			      value))
+		value)))
+       (_ (error "Unknown option combination: %s %s" (symbol-name flag) value))))
+    ((or (pred stringp)
+	 (pred stringp))
+     ;; flag is actualy a query parameter
+     (list flag))))
+
+(defun global--arguments-as-pairs (flags)
+  "Parse arguments from FLAGS as pairs.
+
+:parameter-with-argument string → (:parameter-with-argument string)
+:single-parameter               → (:single-parameter nil).
+To do this, we look at the next argument in the list."
+  (cl-assert (listp flags))
+  (if-let ((head (car flags)))
+      (let ((rest (cdr flags)))
+	(pcase (car rest) ;; is next one …
+	  ((or (pred null)
+	       (pred symbolp)) ;; a symbol
+	   (append
+	    (list `(,head . nil)) ;; parameter doesn't pop an arg from list
+	    (global--arguments-as-pairs rest)))
+	  (_ ;; a number or string
+	   (append
+	    (list `(,head . ,(car rest))) ;; parameter pops an arg from list
+	    (global--arguments-as-pairs
+	     ;; ↓ list without popped arg
+	     (cdr rest))))))))
 
 (defun global--get-arguments (command &rest flags)
   "Get arguments to global as list per COMMAND and flags.
@@ -99,7 +128,7 @@ Flags are not contracted.  Result is a list of arguments."
 FLAGS must be plist like (global--get-arguments … :absolute :color \"always\")."
   (append
    (global--command-flag command)
-   (cl-loop for (key value) on flags
+   (cl-loop for (key value) in (global--arguments-as-pairs flags)
 	    append (global--option-flag key value))))
 
 ;;; Convenience functions (for developers of global.el)
@@ -107,19 +136,33 @@ FLAGS must be plist like (global--get-arguments … :absolute :color \"always\")
 (defun global--get-as-string (command &rest flags)
   "Execute global COMMAND with FLAGS.
 
-FLAGS is a plist.  See `global--get-arguments'"
-  (shell-command-to-string
-   (mapconcat #'shell-quote-argument
-	      (append `(,global--global-command)
-		      (global--get-arguments command flags))
-	      " ")))
+FLAGS is a plist.  See `global--get-arguments'.
+
+If inner global command returns non-0, then this function returns nil."
+  (let* ((program-and-args (append `(,global--global-command)
+				   (global--get-arguments command flags)))
+	 (program (car program-and-args))
+	 (program-args (cdr program-and-args))
+	 (command-return-code)
+	 (command-output-str (with-output-to-string
+			       (setq command-return-code
+				     (apply (apply-partially
+					     'call-process
+					     program
+					     nil
+					     `(,standard-output nil)
+					     nil
+					     )
+					    program-args)))))
+    (if (= command-return-code 0)
+	command-output-str)))
 
 (defun global--get-dbpath (dir)
   "Filepath for database from DIR or nil."
-  (let* ((default-directory dir)
-	 (maybe-dbpath (global--get-as-string 'print-dbpath)))
-    (if (file-exists-p maybe-dbpath)
-	maybe-dbpath)))
+  (if-let* ((default-directory dir)
+	    (maybe-dbpath (global--get-as-string 'print-dbpath)))
+      (if (file-exists-p maybe-dbpath)
+	  maybe-dbpath)))
 
 ;;; project.el integration
 
