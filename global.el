@@ -61,11 +61,20 @@ Flags are not contracted.  Returned as list to compose command."
 ;;; API
 
 (defun global--option-flags (flags)
+  "Support several formats of to-cli-ize FLAGS.
+
+Will recurse on lists."
   (if (not (null flags))
       (let ((head-flag (car flags))
 	    (rest-flags (cdr flags)))
-
 	(pcase head-flag
+	  ((pred listp)
+	   ;; received a list of list
+	   (let ((l head-flag))
+	     (cl-assert (= 1 (length flags)))
+	     (append (global--option-flags l))))
+	  ((pred null)
+	   (global--option-flags rest-flags))
 	  ('nearness
 	   (let ((next-flag (cadr flags))
 		 (rest-flags (cddr flags))) ;; diferent "rest"
@@ -123,7 +132,7 @@ If inner global command returns non-0, then this function returns nil."
 
 Adds (:print0) to flags."
   (split-string
-   (global--get-as-string command (append '(:print0)
+   (global--get-as-string command (append '(print0)
 					  flags))
    "\0" t))
 
@@ -160,7 +169,7 @@ Column is always 0."
 If KIND is omitted, will do \"tag\" search."
   (let ((lines (global--get-lines kind
 				  ;; ↓ see `global--get-location'
-				  :result "grep"
+				  'result "grep"
 				  symbol)))
     (cl-loop for line in lines
 	     collect (global--get-location line))))
@@ -229,7 +238,7 @@ TODO: cache call (see `tags-completion-table' @ etags.el)"
 
 (cl-defmethod xref-backend-definitions ((_backend (eql global)) symbol)
   "See `global--get-locations'."
-  (global--get-xref-locations :definition symbol))
+  (global--get-xref-locations 'definition symbol))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
   (if-let ((symbol (thing-at-point 'symbol)))
@@ -239,7 +248,7 @@ TODO: cache call (see `tags-completion-table' @ etags.el)"
   (global--get-lines 'completion))
 
 (cl-defmethod xref-backend-references ((_backend (eql global)) symbol)
-  (global--get-xref-locations :reference symbol))
+  (global--get-xref-locations 'reference symbol))
 
 (cl-defmethod xref-backend-apropos ((_backend (eql global)) symbol)
   (global--get-xref-locations 'grep symbol))
