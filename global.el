@@ -58,70 +58,28 @@ Flags are not contracted.  Returned as list to compose command."
      (list (format "--%s" (symbol-name command))))
     (_ (error "Unknown command: %s" (symbol-name command)))))
 
-(defun global--option-requires-extra-flag? (option)
-  "Whether command line OPTION requires an extra flag."
-  (if (cl-find option '(color encode-path from-here gtagsconf gtagslabel file-list
-			      match-part ;; 'nearness is handled outside
-			      path-style result single-update
-			      scope))
-      t))
-
-(defun global--option-sans-extra-flag? (option)
-  "Whether command line OPTION does not require an extra flag."
-  (if (not (eq option 'nearness));; 'nearness is handled outside
-      (not (global--option-requires-extra-flag? option))))
-
 ;;; API
 
-(defun global--option-flag (flag &optional value)
-  "Get command line option flag for FLAG as string-or-nil.
+(defun global--option-flags (flags)
+  (if (not (null flags))
+      (let ((head-flag (car flags))
+	    (rest-flags (cdr flags)))
 
-When FLAG requires an extra parameter, this is passed in VALUE.
-Flags are not contracted.  Result is a list of arguments."
-  (pcase flag
-    ((pred symbolp)
-     (pcase (list (global--option-sans-extra-flag? flag) flag value)
-       (`(,_ nearness  ,start) (list (format "--nearness=%s" start)))
-       (`(t ;; no extra option
-	  ,actualflag nil)
-	(list (format "--%s" (replace-regexp-in-string "^:"
-						  "" (symbol-name actualflag)))))
-       (`(nil ;; --some-param some-value
-	  ,actualflag ,value)
-	(list (format "--%s" (replace-regexp-in-string "^:"
-						  "" (symbol-name actualflag)))
-	      (progn
-		(cl-assert (stringp value)
-			   (format "extra parameter for %s must be string, found "
-			      value))
-		value)))
-       (_ (error "Unknown option combination: %s %s" (symbol-name flag) value))))
-    ((or (pred stringp)
-	 (pred stringp))
-     ;; flag is actualy a query parameter
-     (list flag))))
+	(pcase head-flag
+	  ('nearness
+	   (let ((next-flag (cadr flags))
+		 (rest-flags (cddr flags))) ;; diferent "rest"
+	     (append
+	      `(,(format "--nearness=%s" next-flag))
+	      (global--option-flags rest-flags))))
+	  ((pred symbolp)
+	   (append `(,(format "--%s" (symbol-name head-flag)))
+		   (global--option-flags rest-flags)))
+	  ((pred stringp)
+	   (append `(,head-flag)
+		   (global--option-flags rest-flags)))))))
 
-(defun global--arguments-as-pairs (flags)
-  "Parse arguments from FLAGS as pairs.
 
-:parameter-with-argument string → (:parameter-with-argument string)
-:single-parameter               → (:single-parameter nil).
-To do this, we look at the next argument in the list."
-  (cl-assert (listp flags))
-  (if-let ((head (car flags)))
-      (let ((rest (cdr flags)))
-	(pcase (car rest) ;; is next one …
-	  ((or (pred null)
-	       (pred symbolp)) ;; a symbol
-	   (append
-	    (list `(,head . nil)) ;; parameter doesn't pop an arg from list
-	    (global--arguments-as-pairs rest)))
-	  (_ ;; a number or string
-	   (append
-	    (list `(,head . ,(car rest))) ;; parameter pops an arg from list
-	    (global--arguments-as-pairs
-	     ;; ↓ list without popped arg
-	     (cdr rest))))))))
 
 (defun global--get-arguments (command &rest flags)
   "Get arguments to global as list per COMMAND and flags.
@@ -129,8 +87,7 @@ To do this, we look at the next argument in the list."
 FLAGS must be plist like (global--get-arguments … :absolute :color \"always\")."
   (append
    (global--command-flag command)
-   (cl-loop for (key value) in (global--arguments-as-pairs flags)
-	    append (global--option-flag key value))))
+   (global--option-flags flags)))
 
 ;;; Convenience functions (for developers of global.el)
 
@@ -141,7 +98,8 @@ FLAGS is a plist.  See `global--get-arguments'.
 
 If inner global command returns non-0, then this function returns nil."
   (let* ((program-and-args (append `(,global--global-command)
-				   (global--get-arguments command flags)))
+				   (global--get-arguments
+				    command flags)))
 	 (program (car program-and-args))
 	 (program-args (cdr program-and-args))
 	 (command-return-code)

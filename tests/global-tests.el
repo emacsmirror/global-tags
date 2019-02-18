@@ -29,47 +29,36 @@
 (require 'global)
 
 (describe "commands and flags"
-  (it "commands with no extra flag"
-    (expect (global--option-flag 'definition) :to-equal '("--definition"))
-    (expect (global--option-flag 'absolute) :to-equal '("--absolute")))
+	  (it "commands with no extra flag"
+	      (expect (global--option-flags (list 'definition)) :to-equal '("--definition"))
+	      (expect (global--option-flags (list 'absolute)) :to-equal '("--absolute")))
 
-  (it "nearness"
-    (expect
-     (global--option-flag 'nearness "start") :to-equal '("--nearness=start")))
+	  (it "nearness"
+	      (expect
+	       (global--option-flags (list 'nearness "start")) :to-equal '("--nearness=start")))
 
-  (it "tag command has no flag"
-    (expect (global--command-flag 'tag) :to-equal '())
-    (expect (global--command-flag 'completion) :to-equal '("--completion")))
+	  (it "tag command has no flag"
+	      (expect (global--command-flag 'tag) :to-equal '())
+	      (expect (global--command-flag 'completion) :to-equal '("--completion")))
 
-  (it "internal parsing"
-    (expect (global--arguments-as-pairs
-	     '(:parameter-with-argument "string")) :to-equal
-	     '((:parameter-with-argument . "string")))
-    (expect (global--arguments-as-pairs
-	     '(:single-parameter)) :to-equal
-	     '((:single-parameter . nil))))
+	  (it "compose commands and flag"
+	      (expect
+	       (global--get-arguments 'path 'absolute) :to-equal '("--path" "--absolute"))
+	      (expect (global--get-arguments 'tag 'absolute) :to-equal '("--absolute"))
+	      (expect (global--get-arguments 'print-dbpath) :to-equal '("--print-dbpath")))
 
-  (it "compose commands and flag"
-    (expect
-     (global--get-arguments 'path :absolute) :to-equal '("--path" "--absolute"))
-    (expect (global--get-arguments 'tag :absolute) :to-equal '("--absolute"))
-    (expect (global--get-arguments 'print-dbpath) :to-equal '("--print-dbpath")))
-
-  (it "arguments make sense"
-    (expect (global--get-arguments 'print-dbpath nil)
-	    :to-equal
-	    (global--get-arguments 'print-dbpath))
-    (expect (mapconcat #'shell-quote-argument
-		       (append `(,global--global-command)
-			       (global--get-arguments 'print-dbpath))
-		       " ")
-	    :to-equal (format "%s --print-dbpath" global--global-command))
-    (expect
-     (global--get-as-string 'print-dbpath) :to-equal nil))
-  (it "nil return from invalid command"
-    (expect (global--get-as-string 'file "not-an-existing-file") :to-equal nil))
-  (it "no dbpath"
-    (expect (global--get-dbpath "/") :to-equal nil)))
+	  (it "arguments make sense"
+	      (expect (mapconcat #'shell-quote-argument
+				 (append `(,global--global-command)
+					 (global--get-arguments 'print-dbpath))
+				 " ")
+		      :to-equal (format "%s --print-dbpath" global--global-command))
+	      (expect
+	       (global--get-as-string 'print-dbpath) :to-equal nil))
+	  (it "nil return from invalid command"
+	      (expect (global--get-as-string 'file "not-an-existing-file") :to-equal nil))
+	  (it "no dbpath"
+	      (expect (global--get-dbpath "/") :to-equal nil)))
 
 (describe "internals"
 	  (it "parse line"
