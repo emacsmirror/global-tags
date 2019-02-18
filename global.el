@@ -243,8 +243,7 @@ TODO: cache call (see `tags-completion-table' @ etags.el)"
   (let ((all-files
 	 (cl-mapcan
 	  (lambda (dir)
-	    (let* ((project-root (cdr project))
-		   (default-directory project-root))
+	    (let* ((default-directory dir))
 	      (global--get-lines 'path)))
 	  dirs)))
     (lambda (string pred action)
