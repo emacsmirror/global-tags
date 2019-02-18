@@ -11,3 +11,4 @@
   (load bootstrap-file nil 'nomessage))
 
 (straight-use-package 'buttercup)
+(straight-use-package 'f)

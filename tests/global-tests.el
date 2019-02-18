@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'buttercup)
+(require 'f)
 (require 'global)
 
 (describe "commands and flags"
@@ -71,11 +72,60 @@
     (expect (global--get-dbpath "/") :to-equal nil)))
 
 (describe "internals"
-  (it "parse line"
-    (let-alist (global--get-location "some/file/path/src.cpp:423:static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
-      (expect .description :to-equal "static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
-      (expect .file :to-equal "some/file/path/src.cpp")
-      (expect .line :to-equal 423))))
+	  (it "parse line"
+	      (let-alist (global--get-location "some/file/path/src.cpp:423:static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
+		(expect .description :to-equal "static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
+		(expect .file :to-equal "some/file/path/src.cpp")
+		(expect .line :to-equal 423))))
+(describe "reading output"
+	  (before-each
+	   (setq global-tmp-project-directory
+		 (make-temp-file
+		  "global-unit-test-mock-project"
+		  t))
+	   (global--create-mock-project global-tmp-project-directory))
+	  (it "read files"
+	      (let ((default-directory global-tmp-project-directory))
+		(expect (global--get-lines 'path)
+			:to-equal '("main.c" "main.h")))))
+
+(defun global--create-mock-project (project-path)
+  "Create mock project on PROJECT-PATH."
+  (let* ((default-directory (file-name-as-directory project-path))
+	 (main-file-path (concat
+			  (file-name-as-directory
+			   default-directory)
+			  "main.c"))
+	 (main-header-path (concat
+			    (file-name-as-directory
+			     default-directory)
+			    "main.h"))
+	 (main-header-text "char *header_string;
+int header_int;
+float header_float;
+void global_fun();
+void another_global_fun();
+")
+	 (main-file-text  "
+#include \"main.h\"
+
+char *global_string;
+int global_int;
+float global_float;
+void global_fun(){
+    write(header_string);
+    write(header_header_int);
+}
+void another_global_fun(){
+    write(header_header_int);
+}
+int main{
+    int local_int;
+}")
+	 )
+    (f-write-text main-file-text 'utf-8 main-file-path)
+    (f-write-text main-header-text 'utf-8 main-header-path)
+    (call-process "gtags")))
 
 
 
