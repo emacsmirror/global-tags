@@ -244,7 +244,9 @@ TODO: cache call (see `tags-completion-table' @ etags.el)"
 	 (cl-mapcan
 	  (lambda (dir)
 	    (let* ((default-directory dir))
-	      (global--get-lines 'path)))
+	      (global--get-lines 'path
+				 ;; ↓ project.el sorts out presenting long names
+				 :absolute)))
 	  dirs)))
     (lambda (string pred action)
       (cond
