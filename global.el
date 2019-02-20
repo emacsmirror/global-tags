@@ -70,6 +70,8 @@ Will recurse on lists."
 	(pcase head-flag
 	  ((pred listp)
 	   ;; received a list of list
+	   ;; if you know elisp and know how to handle ⎡&rest⎦, then you can
+	   ;; help remove this section
 	   (let ((l head-flag))
 	     (cl-assert (= 1 (length flags)))
 	     (append (global--option-flags l))))
@@ -204,16 +206,14 @@ See `project-roots' for 'transient."
   (list (cdr project)))
 
 (cl-defmethod project-file-completion-table ((project (head global)) dirs)
-  "Same as generic `project-file-completion-table', but replacing find command.
-
-TODO: cache call (see `tags-completion-table' @ etags.el)"
+  "Same as generic `project-file-completion-table', but replacing find command."
   (let ((all-files
 	 (cl-mapcan
 	  (lambda (dir)
 	    (let* ((default-directory dir))
 	      (global--get-lines 'path
 				 ;; ↓ project.el sorts out presenting long names
-				 :absolute)))
+				 'absolute)))
 	  dirs)))
     (lambda (string pred action)
       (cond
