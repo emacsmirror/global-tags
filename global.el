@@ -241,8 +241,8 @@ See `project-roots' for 'transient."
   (global--get-xref-locations 'definition symbol))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
-  (if-let ((symbol (thing-at-point 'symbol)))
-      (symbol-name symbol)))
+  (if-let ((symbol-str (thing-at-point 'symbol)))
+      symbol-str))
 
 (cl-defmethod xref-backend-identifier-completion-table ((_backend (eql global)))
   (global--get-lines 'completion))
