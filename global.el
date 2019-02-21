@@ -238,7 +238,7 @@ See `project-roots' for 'transient."
 
 (cl-defmethod xref-backend-definitions ((_backend (eql global)) symbol)
   "See `global--get-locations'."
-  (global--get-xref-locations 'definition symbol))
+  (global--get-xref-locations 'tag symbol))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
   (if-let ((symbol-str (thing-at-point 'symbol)))
