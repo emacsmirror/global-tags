@@ -15,3 +15,4 @@
 * https://github.com/syohex/emacs-counsel-gtags[counsel-gtags]: unmaintained and non-re-usable https://github.com/abo-abo/swiper[counsel] interface. (my maintained fork https://github.com/FelipeLema/emacs-counsel-gtags/[here])
 * https://github.com/leoliu/ggtags[ggtags]: interface using `compilation-mode`. Not a re-usable library (see https://github.com/leoliu/ggtags/issues/175#issuecomment-428986369[here])
 * https://github.com/dedi/gxref/[gxref]: unmaintaned
+* https://github.com/alexmurray/ivy-xref: Use Ivy for xref commands.
