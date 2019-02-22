@@ -187,10 +187,13 @@ See `global--get-locations'."
 
 (defun global--get-dbpath (dir)
   "Filepath for database from DIR or nil."
-  (if-let* ((default-directory dir)
-	    (maybe-dbpath (global--get-as-string 'print-dbpath)))
-      (if (file-exists-p maybe-dbpath)
-	  maybe-dbpath)))
+  (if-let* ((maybe-dbpath (let ((default-directory dir))
+			    (global--get-as-string 'print-dbpath)))
+	    ;; db path is *always* printed with trailing newline
+	    (trimmed-dbpath (substring maybe-dbpath 0
+				       (- (length maybe-dbpath) 1))))
+      (if (file-exists-p trimmed-dbpath)
+	  trimmed-dbpath)))
 
 ;;; project.el integration
 

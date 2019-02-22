@@ -76,7 +76,10 @@
 	  (it "read files"
 	      (let ((default-directory global-tmp-project-directory))
 		(expect (global--get-lines 'path)
-			:to-equal '("main.c" "main.h")))))
+			:to-equal '("main.c" "main.h"))))
+	  (it "dbpath read correctly"
+	      (expect (global--get-dbpath global-tmp-project-directory)
+		      :to-equal global-tmp-project-directory)))
 
 (defun global--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
