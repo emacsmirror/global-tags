@@ -81,6 +81,26 @@
 	      (expect (global--get-dbpath global-tmp-project-directory)
 		      :to-equal global-tmp-project-directory)))
 
+(describe "quirks"
+	  (before-each
+	   (setq global-tmp-project-directory
+		 (make-temp-file
+		  "global-unit-test-mock-project"
+		  t))
+	   (global--create-mock-project global-tmp-project-directory))
+	  (it "global --completion does not respect --print0"
+	      (let ((default-directory global-tmp-project-directory)
+		    (completion-tags '("another_global_fun" "global_fun")))
+		;; look how we call global with --print0,
+		;; yet symbols are \n-sepaarated
+		(expect (global--get-as-string 'completion '(print0))
+			:to-equal
+			(format "%s\n" (mapconcat 'identity
+					     completion-tags
+					     "\n")))
+		(expect (global--get-lines 'completion)
+			:to-equal completion-tags))))
+
 (defun global--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
   (let* ((default-directory (file-name-as-directory project-path))

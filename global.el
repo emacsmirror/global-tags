@@ -132,11 +132,19 @@ If inner global command returns non-0, then this function returns nil."
 (defun global--get-lines (command &rest flags)
   "Break global COMMAND FLAGS output into lines.
 
-Adds (:print0) to flags."
-  (split-string
-   (global--get-as-string command (append '(print0)
-					  flags))
-   "\0" t))
+Adds (print0) to flags.
+
+If COMMAND is completion, no print0 is added (global ignores it underneath)."
+  (pcase command
+    (`completion
+     (split-string
+      (global--get-as-string command (delete 'print0
+					     flags))
+      "\n" t))
+    (_ (split-string
+	(global--get-as-string command (append '(print0)
+					       flags))
+	"\0" t))))
 
 (defun global--get-location (line)
   "Parse location from LINE.
