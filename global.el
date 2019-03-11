@@ -1,8 +1,8 @@
 ;;; global.el --- elisp wrapper functions and Emacs integration for GNU global  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2019  Felipe Lema
+;; Copyright © 2019  Felipe Lema
 
-;; Author: Felipe Lema <felipel@cl01cats24>
+;; Author: Felipe Lema <felipelema@mortemale.org>
 ;; Keywords:
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -18,10 +18,6 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-;;; WIP:
-;; - wrapper calls
-;; - project.el integration
-;; - xref.el integration
 
 ;;; Commentary:
 

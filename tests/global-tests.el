@@ -1,9 +1,9 @@
 ;;; global-tests.el --- tests for global.el          -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2019  Felipe Lema
+;; Copyright © 2019  Felipe Lema
 
-;; Author: Felipe Lema <felipel@devuan-pega>
-;; Keywords: 
+;; Author: Felipe Lema <felipelema@mortemale.org>
+;; Keywords:
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
