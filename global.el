@@ -217,6 +217,18 @@ See `project-roots' for 'transient."
   (list (cdr project)))
 
 (cl-defmethod project-file-completion-table ((project (head global)) dirs)
+  "See documentation for `project-file-completion-table'.
+
+Forwards DIRS to `global--project-file-completion-table-ivy' if ivy
+ is available.
+Else, forwards to global--project-file-completion-table-default."
+  (cond
+   ((fboundp 'ivy-read)
+    (global--project-file-completion-table-ivy dirs))
+   (t
+    (global--project-file-completion-table-ivy dirs))))
+
+(defun global--project-file-completion-table-default (dirs)
   "Same as generic `project-file-completion-table', but replacing find command."
   (let ((all-files
 	 (cl-mapcan
@@ -233,6 +245,73 @@ See `project-roots' for 'transient."
        (t
 	(complete-with-action action all-files string pred))))))
 
+;;;; integration with ivy
+(declare-function ivy-read 'ivy)
+(defun global--project-file-completion-table-function (dirs input)
+  "Async search file for INPUT on each dir in DIRS.
+
+Call `global--global-command' on each dir, then filter using `grep-command'.
+
+Inspired on ivy.org's `counsel-locate-function'."
+  (or
+   (ivy-more-chars)
+   (progn
+     (let* ((command-per-dir
+             (mapcar
+              (lambda (dir)
+                (let* ((program-and-args (append `(,global--global-command)
+				                 (global--get-arguments
+				                  'path '(absolute))))
+                       (quoted-program-and-args
+                        (mapcar
+                         ;; ↓ in case `global--global-command' has special chars
+                         'shell-quote-argument program-and-args))
+                       (global-command
+                        (string-join quoted-program-and-args " "))
+                       (shell-command (format "cd %s && %s"
+                                              (shell-quote-argument dir)
+                                              global-command)))
+                  shell-command))
+              dirs))
+            (commands-as-single
+             (string-join command-per-dir " && "))
+            (piped-command (format "(%s) | %s %s"
+                                   commands-as-single
+                                   ;; ag does not support ⎡-P⎦
+                                   (if-let* ((grep (or grep-command "grep"))
+                                             (is-ag (string-equal
+                                                     "ag"
+                                                     (substring grep
+                                                                (- (length grep) 2)
+                                                                (length grep)))))
+                                       grep ;; ag
+                                     (format "%s -P" grep)) ;; use perlre/pcre
+                                   (shell-quote-argument
+                                    (counsel--elisp-to-pcre
+                                     (ivy--regex input))))))
+       (counsel--async-command
+        piped-command))
+     '("" "Reading files…"))))
+
+(defun global--project-file-completion-table-ivy (dirs)
+  "Like `project-file-completion-table', but replacing find cmd and using ivy."
+  (lambda (string pred action) ;; #f(compiled-function (string pred action) #<bytecode 0x10789df1>)("" nil t)
+    (cond
+     ((eq action 'metadata)
+      '(metadata . ((category . project-file))))
+     (t
+      (ivy-read "Find file:"
+                (lambda (input)
+                  (global--project-file-completion-table-function dirs input))
+                :initial-input string
+                :dynamic-collection t
+                :history 'global--project-file-completion-table-ivy-history
+                :action (lambda (f)
+                          (with-ivy-window
+                            (when f
+                              (find-file f))))
+                :unwind #'counsel-delete-process
+                :caller 'global--project-file-completion-table-ivy)))))
 ;; No need to implement unless necessary
 ;;(cl-defmethod project-external-roots ((project (head global)))
 ;;  )
