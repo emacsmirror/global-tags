@@ -261,7 +261,9 @@ Inspired on ivy.org's `counsel-locate-function'."
               (lambda (dir)
                 (let* ((program-and-args (append `(,global--global-command)
 				                 (global--get-arguments
-				                  'path '(absolute))))
+				                  'path '(absolute))
+                                                 `(,(counsel--elisp-to-pcre
+                                                     (ivy--regex input)))))
                        (quoted-program-and-args
                         (mapcar
                          ;; ↓ in case `global--global-command' has special chars
@@ -274,23 +276,9 @@ Inspired on ivy.org's `counsel-locate-function'."
                   shell-command))
               dirs))
             (commands-as-single
-             (string-join command-per-dir " && "))
-            (piped-command (format "(%s) | %s %s"
-                                   commands-as-single
-                                   ;; ag does not support ⎡-P⎦
-                                   (if-let* ((grep (or grep-command "grep"))
-                                             (is-ag (string-equal
-                                                     "ag"
-                                                     (substring grep
-                                                                (- (length grep) 2)
-                                                                (length grep)))))
-                                       grep ;; ag
-                                     (format "%s -P" grep)) ;; use perlre/pcre
-                                   (shell-quote-argument
-                                    (counsel--elisp-to-pcre
-                                     (ivy--regex input))))))
+             (string-join command-per-dir " && ")))
        (counsel--async-command
-        piped-command))
+        commands-as-single))
      '("" "Reading files…"))))
 
 (defun global--project-file-completion-table-ivy (dirs)
