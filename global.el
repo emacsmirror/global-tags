@@ -38,9 +38,11 @@
 
 ;;;; variables
 
-(defvar global--global-command
+(defcustom global--global-command
   "global"
-  "Name/path to Global executable.")
+  "Name/path to Global executable."
+  :type 'string
+  :group 'global)
 
 ;;;; utility functions:
 
