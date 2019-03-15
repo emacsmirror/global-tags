@@ -8,8 +8,8 @@ all: test
 # Use LC_ALL=C to avoid locale dependencies in the dates!
 test:
 	LC_ALL=C $(BEMACS) -l tests/setup.el \
-	       -l global.el \
-	       -l tests/global-tests.el \
+	       -l global-tags.el \
+	       -l tests/global-tags-tests.el \
 	       -f buttercup-run-discover
 
 .PHONY:	all test
