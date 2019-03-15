@@ -26,43 +26,43 @@
 
 (require 'buttercup)
 (require 'f)
-(require 'global)
+(require 'global-tags)
 
 (describe "commands and flags"
 	  (it "commands with no extra flag"
-	      (expect (global--option-flags (list 'definition)) :to-equal '("--definition"))
-	      (expect (global--option-flags (list 'absolute)) :to-equal '("--absolute")))
+	      (expect (global-tags--option-flags (list 'definition)) :to-equal '("--definition"))
+	      (expect (global-tags--option-flags (list 'absolute)) :to-equal '("--absolute")))
 
 	  (it "nearness"
 	      (expect
-	       (global--option-flags (list 'nearness "start")) :to-equal '("--nearness=start")))
+	       (global-tags--option-flags (list 'nearness "start")) :to-equal '("--nearness=start")))
 
 	  (it "tag command has no flag"
-	      (expect (global--command-flag 'tag) :to-equal '())
-	      (expect (global--command-flag 'completion) :to-equal '("--completion")))
+	      (expect (global-tags--command-flag 'tag) :to-equal '())
+	      (expect (global-tags--command-flag 'completion) :to-equal '("--completion")))
 
 	  (it "compose commands and flag"
 	      (expect
-	       (global--get-arguments 'path 'absolute) :to-equal '("--path" "--absolute"))
-	      (expect (global--get-arguments 'tag 'absolute) :to-equal '("--absolute"))
-	      (expect (global--get-arguments 'print-dbpath) :to-equal '("--print-dbpath")))
+	       (global-tags--get-arguments 'path 'absolute) :to-equal '("--path" "--absolute"))
+	      (expect (global-tags--get-arguments 'tag 'absolute) :to-equal '("--absolute"))
+	      (expect (global-tags--get-arguments 'print-dbpath) :to-equal '("--print-dbpath")))
 
 	  (it "arguments make sense"
 	      (expect (mapconcat #'shell-quote-argument
-				 (append `(,global--global-command)
-					 (global--get-arguments 'print-dbpath))
+				 (append `(,global-tags--global-command)
+					 (global-tags--get-arguments 'print-dbpath))
 				 " ")
-		      :to-equal (format "%s --print-dbpath" global--global-command))
+		      :to-equal (format "%s --print-dbpath" global-tags--global-command))
 	      (expect
-	       (global--get-as-string 'print-dbpath) :to-equal nil))
+	       (global-tags--get-as-string 'print-dbpath) :to-equal nil))
 	  (it "nil return from invalid command"
-	      (expect (global--get-as-string 'file "not-an-existing-file") :to-equal nil))
+	      (expect (global-tags--get-as-string 'file "not-an-existing-file") :to-equal nil))
 	  (it "no dbpath"
-	      (expect (global--get-dbpath "/") :to-equal nil)))
+	      (expect (global-tags--get-dbpath "/") :to-equal nil)))
 
 (describe "internals"
 	  (it "parse line"
-	      (let-alist (global--get-location "some/file/path/src.cpp:423:static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
+	      (let-alist (global-tags--get-location "some/file/path/src.cpp:423:static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
 		(expect .description :to-equal "static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
 		(expect .file :to-equal "some/file/path/src.cpp")
 		(expect .line :to-equal 423))))
@@ -72,13 +72,13 @@
 		 (make-temp-file
 		  "global-unit-test-mock-project"
 		  t))
-	   (global--create-mock-project global-tmp-project-directory))
+	   (global-tags--create-mock-project global-tmp-project-directory))
 	  (it "read files"
 	      (let ((default-directory global-tmp-project-directory))
-		(expect (global--get-lines 'path)
+		(expect (global-tags--get-lines 'path)
 			:to-equal '("main.c" "main.h"))))
 	  (it "dbpath read correctly"
-	      (expect (global--get-dbpath global-tmp-project-directory)
+	      (expect (global-tags--get-dbpath global-tmp-project-directory)
 		      :to-equal global-tmp-project-directory)))
 
 (describe "quirks"
@@ -87,21 +87,21 @@
 		 (make-temp-file
 		  "global-unit-test-mock-project"
 		  t))
-	   (global--create-mock-project global-tmp-project-directory))
+	   (global-tags--create-mock-project global-tmp-project-directory))
 	  (it "global --completion does not respect --print0"
 	      (let ((default-directory global-tmp-project-directory)
 		    (completion-tags '("another_global_fun" "global_fun")))
 		;; look how we call global with --print0,
 		;; yet symbols are \n-sepaarated
-		(expect (global--get-as-string 'completion '(print0))
+		(expect (global-tags--get-as-string 'completion '(print0))
 			:to-equal
 			(format "%s\n" (mapconcat 'identity
 					     completion-tags
 					     "\n")))
-		(expect (global--get-lines 'completion)
+		(expect (global-tags--get-lines 'completion)
 			:to-equal completion-tags))))
 
-(defun global--create-mock-project (project-path)
+(defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
   (let* ((default-directory (file-name-as-directory project-path))
 	 (main-file-path (concat
