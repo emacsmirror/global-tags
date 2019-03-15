@@ -220,6 +220,7 @@ See `project-roots' for 'transient."
 Forwards DIRS to `global--project-file-completion-table-ivy' if ivy
  is available.
 Else, forwards to global--project-file-completion-table-default."
+  (ignore project)
   (cond
    ((fboundp 'ivy-read)
     (global--project-file-completion-table-ivy dirs))
@@ -227,7 +228,9 @@ Else, forwards to global--project-file-completion-table-default."
     (global--project-file-completion-table-ivy dirs))))
 
 (defun global--project-file-completion-table-default (dirs)
-  "Same as generic `project-file-completion-table', but replacing find command."
+  "Same as generic `project-file-completion-table', but replacing find command.
+
+Get files from ueach dir ∈ DIRS using `global --path`"
   (let ((all-files
 	 (cl-mapcan
 	  (lambda (dir)
@@ -244,7 +247,13 @@ Else, forwards to global--project-file-completion-table-default."
 	(complete-with-action action all-files string pred))))))
 
 ;;;; integration with ivy
+(declare-function counsel--elisp-to-pcre 'counsel)
+(declare-function counsel--async-command 'counsel)
+(declare-function counsel-delete-process 'counsel)
+(declare-function ivy--regex 'ivy)
+(declare-function ivy-more-chars 'ivy)
 (declare-function ivy-read 'ivy)
+(declare-function with-ivy-window 'ivy)
 (defun global--project-file-completion-table-function (dirs input)
   "Async search file for INPUT on each dir in DIRS.
 
@@ -255,33 +264,36 @@ Inspired on ivy.org's `counsel-locate-function'."
    (ivy-more-chars)
    (progn
      (let* ((command-per-dir
-             (mapcar
-              (lambda (dir)
+	     (mapcar
+	      (lambda (dir)
                 (let* ((program-and-args (append `(,global--global-command)
 				                 (global--get-arguments
 				                  'path '(absolute))
                                                  `(,(counsel--elisp-to-pcre
-                                                     (ivy--regex input)))))
-                       (quoted-program-and-args
+						     (ivy--regex input)))))
+		       (quoted-program-and-args
                         (mapcar
                          ;; ↓ in case `global--global-command' has special chars
                          'shell-quote-argument program-and-args))
-                       (global-command
+		       (global-command
                         (string-join quoted-program-and-args " "))
-                       (shell-command (format "cd %s && %s"
-                                              (shell-quote-argument dir)
-                                              global-command)))
+		       (shell-command (format "cd %s && %s"
+                                         (shell-quote-argument dir)
+                                         global-command)))
                   shell-command))
-              dirs))
-            (commands-as-single
-             (string-join command-per-dir " && ")))
+	      dirs))
+	    (commands-as-single
+	     (string-join command-per-dir " && ")))
        (counsel--async-command
         commands-as-single))
      '("" "Reading files…"))))
 
 (defun global--project-file-completion-table-ivy (dirs)
-  "Like `project-file-completion-table', but replacing find cmd and using ivy."
+  "Like `project-file-completion-table', but replacing find cmd and using ivy.
+
+Get files from ueach dir ∈ DIRS using `global --path`"
   (lambda (string pred action) ;; #f(compiled-function (string pred action) #<bytecode 0x10789df1>)("" nil t)
+    (ignore pred)
     (cond
      ((eq action 'metadata)
       '(metadata . ((category . project-file))))
@@ -294,8 +306,8 @@ Inspired on ivy.org's `counsel-locate-function'."
                 :history 'global--project-file-completion-table-ivy-history
                 :action (lambda (f)
                           (with-ivy-window
-                            (when f
-                              (find-file f))))
+			    (when f
+			      (find-file f))))
                 :unwind #'counsel-delete-process
                 :caller 'global--project-file-completion-table-ivy)))))
 ;; No need to implement unless necessary
@@ -308,7 +320,7 @@ Inspired on ivy.org's `counsel-locate-function'."
 ;;; xref.el integration
 
 (defun global-xref-backend ()
-  "global backend for Xref."
+  "Xref backend for using global."
   (if (global--get-dbpath default-directory)
       'global))
 
