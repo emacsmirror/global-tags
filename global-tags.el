@@ -225,7 +225,7 @@ Else, forwards to global-tags--project-file-completion-table-default."
    ((fboundp 'ivy-read)
     (global-tags--project-file-completion-table-ivy dirs))
    (t
-    (global-tags--project-file-completion-table-ivy dirs))))
+    (global-tags--project-file-completion-table-default dirs))))
 
 (defun global-tags--project-file-completion-table-default (dirs)
   "Same as generic `project-file-completion-table', but replacing find command.
