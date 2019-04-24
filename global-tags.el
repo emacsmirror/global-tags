@@ -293,7 +293,7 @@ Inspired on ivy.org's `counsel-locate-function'."
   "Like `project-file-completion-table', but replacing find cmd and using ivy.
 
 Get files from ueach dir ∈ DIRS using `global --path`"
-  (lambda (string pred action) ;; #f(compiled-function (string pred action) #<bytecode 0x10789df1>)("" nil t)
+  (lambda (string pred action)
     (ignore pred)
     (cond
      ((eq action 'metadata)
