@@ -215,102 +215,24 @@ See `project-roots' for 'transient."
   (list (cdr project)))
 
 (cl-defmethod project-file-completion-table ((project (head global)) dirs)
-  "See documentation for `project-file-completion-table'.
-
-Forwards DIRS to `global-tags--project-file-completion-table-ivy' if ivy
- is available.
-Else, forwards to global-tags--project-file-completion-table-default."
+  "See documentation for `project-file-completion-table'."
   (ignore project)
-  (cond
-   ((fboundp 'ivy-read)
-    (global-tags--project-file-completion-table-ivy dirs))
-   (t
-    (global-tags--project-file-completion-table-default dirs))))
-
-(defun global-tags--project-file-completion-table-default (dirs)
-  "Same as generic `project-file-completion-table', but replacing find command.
-
-Get files from ueach dir ∈ DIRS using `global --path`"
-  (let ((all-files
-	 (cl-mapcan
-	  (lambda (dir)
-	    (let* ((default-directory dir))
-	      (global-tags--get-lines 'path
-				 ;; ↓ project.el sorts out presenting long names
-				 'absolute)))
-	  dirs)))
-    (lambda (string pred action)
-      (cond
-       ((eq action 'metadata)
-	'(metadata . ((category . project-file))))
-       (t
-	(complete-with-action action all-files string pred))))))
-
-;;;; integration with ivy
-(declare-function counsel--elisp-to-pcre 'counsel)
-(declare-function counsel--async-command 'counsel)
-(declare-function counsel-delete-process 'counsel)
-(declare-function ivy--regex 'ivy)
-(declare-function ivy-more-chars 'ivy)
-(declare-function ivy-read 'ivy)
-(declare-function with-ivy-window 'ivy)
-(defun global-tags--project-file-completion-table-function (dirs input)
-  "Async search file for INPUT on each dir in DIRS.
-
-Call `global-tags--global-command' on each dir, then filter using
-grep-command'.
-
-Inspired on ivy.org's `counsel-locate-function'."
-  (or
-   (ivy-more-chars)
-   (progn
-     (let* ((command-per-dir
-	     (mapcar
-	      (lambda (dir)
-                (let* ((program-and-args (append `(,global-tags--global-command)
-				                 (global-tags--get-arguments
-				                  'path '(absolute))
-                                                 `(,(counsel--elisp-to-pcre
-						     (ivy--regex input)))))
-		       (quoted-program-and-args
-                        (mapcar
-                         ;; ↓ keep `global-tags--global-command' in mind
-                         'shell-quote-argument program-and-args))
-		       (global-command
-                        (string-join quoted-program-and-args " "))
-		       (shell-command (format "cd %s && %s"
-                                         (shell-quote-argument dir)
-                                         global-command)))
-                  shell-command))
-	      dirs))
-	    (commands-as-single
-	     (string-join command-per-dir " && ")))
-       (counsel--async-command
-        commands-as-single))
-     '("" "Reading files…"))))
-
-(defun global-tags--project-file-completion-table-ivy (dirs)
-  "Like `project-file-completion-table', but replacing find cmd and using ivy.
-
-Get files from ueach dir ∈ DIRS using `global --path`"
   (lambda (string pred action)
-    (ignore pred)
     (cond
      ((eq action 'metadata)
       '(metadata . ((category . project-file))))
      (t
-      (ivy-read "Find file:"
-                (lambda (input)
-                  (global-tags--project-file-completion-table-function dirs input))
-                :initial-input string
-                :dynamic-collection t
-                :history 'global-tags--project-file-completion-table-ivy-history
-                :action (lambda (f)
-                          (with-ivy-window
-			    (when f
-			      (find-file f))))
-                :unwind #'counsel-delete-process
-                :caller 'global-tags--project-file-completion-table-ivy)))))
+      (let ((all-files
+             (cl-mapcan
+              (lambda (dir)
+                (let* ((default-directory dir))
+                  (global-tags--get-lines 'path
+                                          ;; ↓ project.el deals w/long names
+                                          'absolute
+                                          pred)))
+              dirs)))
+        (complete-with-action action all-files string pred))))))
+
 ;; No need to implement unless necessary
 ;;(cl-defmethod project-external-roots ((project (head global)))
 ;;  )
