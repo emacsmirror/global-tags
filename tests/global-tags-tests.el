@@ -68,24 +68,28 @@ tags.")
     (expect (global-tags--get-dbpath "/") :to-equal nil)))
 
 (describe "internals"
-	  (it "parse line"
-	      (let-alist (global-tags--get-location "some/file/path/src.cpp:423:static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
-		(expect .description :to-equal "static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
-		(expect .file :to-equal "some/file/path/src.cpp")
-		(expect .line :to-equal 423))))
+  (it "parse line"
+    (let-alist (global-tags--get-location "some/file/path/src.cpp:423:static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
+      (expect .description :to-equal "static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
+      (expect .file :to-equal "some/file/path/src.cpp")
+      (expect .line :to-equal 423)))
+  (it "line with empty description (string size 0)"
+    (expect (global-tags--get-location "some_file.cpp:50:")
+            :not :to-be nil)))
+
 (describe "reading output"
-	  (before-each
-	   (setq global-tmp-project-directory
-		 (global-gtags--create-temporary-mock-project)))
-          (after-each
-           (delete-directory global-tmp-project-directory t))
-	  (it "read files"
-	      (let ((default-directory global-tmp-project-directory))
-		(expect (global-tags--get-lines 'path)
-			:to-equal '("main.c" "main.h"))))
-	  (it "dbpath read correctly"
-	      (expect (global-tags--get-dbpath global-tmp-project-directory)
-		      :to-equal global-tmp-project-directory)))
+  (before-each
+    (setq global-tmp-project-directory
+          (global-gtags--create-temporary-mock-project)))
+  (after-each
+    (delete-directory global-tmp-project-directory t))
+  (it "read files"
+    (let ((default-directory global-tmp-project-directory))
+      (expect (global-tags--get-lines 'path)
+              :to-equal '("main.c" "main.h"))))
+  (it "dbpath read correctly"
+    (expect (global-tags--get-dbpath global-tmp-project-directory)
+            :to-equal global-tmp-project-directory)))
 
 (describe "quirks"
   (before-each

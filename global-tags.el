@@ -156,7 +156,7 @@ Column is always 0."
 			  ?: ;; separator
 			  (group (+ (any digit))) ;; line
 			  ?: ;; separator
-			  (group (+ (any print))) ;; function
+			  (group (* (any print))) ;; function
 			  line-end)
 		      line)
 	`((file . ,(match-string 1 line))
