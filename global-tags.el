@@ -93,7 +93,8 @@ Will recurse on lists."
 (defun global-tags--get-arguments (command &rest flags)
   "Get arguments to global as list per COMMAND and flags.
 
-FLAGS must be plist like (global-tags--get-arguments … :absolute :color \"always\")."
+FLAGS must be plist like
+\(global-tags--get-arguments … :absolute :color \"always\"\)."
   (append
    (global-tags--command-flag command)
    (global-tags--option-flags flags)))
@@ -164,7 +165,7 @@ Column is always 0."
 	  (column . 0)))))
 
 (defun global-tags--as-xref-location (location-description)
-  "Map LOCATION-DESCRIPTION from `global-tags--get-locations' to xref's representation."
+  "Map LOCATION-DESCRIPTION from `global-tags--get-locations' to xref's repr."
   (let-alist location-description
     (xref-make .description
 	       (xref-make-file-location .file
@@ -176,20 +177,17 @@ Column is always 0."
 
 If KIND is omitted, will do \"tag\" search."
   (let ((lines (global-tags--get-lines kind
-				  ;; ↓ see `global-tags--get-location'
-				  'result "grep"
-				  symbol)))
-    (cl-loop for line in lines
-	     collect (global-tags--get-location line))))
+                                       ;; ↓ see `global-tags--get-location'
+                                       'result "grep"
+                                       symbol)))
+    (cl-mapcar #'global-tags--get-location lines)))
 
-(defun global-tags--get-xref-locations (symbol &optional kind)
-  "Get xref locations according to SYMBOL and KIND.
+(defun global-tags--get-xref-locations (symbol kind)
+  "Get xref locations according to KIND using SYMBOL as query.
 
-If KIND is omitted, will do \"tag\" search.
 See `global-tags--get-locations'."
-  (if-let ((results (global-tags--get-locations kind symbol)))
-      (cl-loop for result in results
-	       collect (global-tags--as-xref-location result))))
+  (cl-mapcar #'global-tags--as-xref-location
+             (global-tags--get-locations symbol kind)))
 
 (defun global-tags--get-dbpath (dir)
   "Filepath for database from DIR or nil."
@@ -249,7 +247,7 @@ See `project-roots' for 'transient."
 
 (cl-defmethod xref-backend-definitions ((_backend (eql global)) symbol)
   "See `global-tags--get-locations'."
-  (global-tags--get-xref-locations 'tag symbol))
+  (global-tags--get-xref-locations symbol 'tag))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
   (if-let ((symbol-str (thing-at-point 'symbol)))
@@ -259,10 +257,10 @@ See `project-roots' for 'transient."
   (global-tags--get-lines 'completion))
 
 (cl-defmethod xref-backend-references ((_backend (eql global)) symbol)
-  (global-tags--get-xref-locations 'reference symbol))
+  (global-tags--get-xref-locations symbol 'reference))
 
 (cl-defmethod xref-backend-apropos ((_backend (eql global)) symbol)
-  (global-tags--get-xref-locations 'grep symbol))
+  (global-tags--get-xref-locations symbol 'grep))
 
 ;;;; TODO
 ;;;; cache calls (see `tags-completion-table' @ etags.el)
