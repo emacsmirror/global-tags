@@ -69,10 +69,9 @@
 (describe "reading output"
 	  (before-each
 	   (setq global-tmp-project-directory
-		 (make-temp-file
-		  "global-unit-test-mock-project"
-		  t))
-	   (global-tags--create-mock-project global-tmp-project-directory))
+		 (global-gtags--create-temporary-mock-project)))
+          (after-each
+           (delete-directory global-tmp-project-directory t))
 	  (it "read files"
 	      (let ((default-directory global-tmp-project-directory))
 		(expect (global-tags--get-lines 'path)
@@ -84,10 +83,9 @@
 (describe "quirks"
 	  (before-each
 	   (setq global-tmp-project-directory
-		 (make-temp-file
-		  "global-unit-test-mock-project"
-		  t))
-	   (global-tags--create-mock-project global-tmp-project-directory))
+		 (global-gtags--create-temporary-mock-project)))
+          (after-each
+           (delete-directory global-tmp-project-directory t))
 	  (it "global --completion does not respect --print0"
 	      (let ((default-directory global-tmp-project-directory)
 		    (completion-tags '("another_global_fun" "global_fun")))
@@ -96,8 +94,8 @@
 		(expect (global-tags--get-as-string 'completion '(print0))
 			:to-equal
 			(format "%s\n" (mapconcat 'identity
-					     completion-tags
-					     "\n")))
+                                                  completion-tags
+                                                  "\n")))
 		(expect (global-tags--get-lines 'completion)
 			:to-equal completion-tags))))
 
@@ -139,7 +137,13 @@ int main{
     (f-write-text main-header-text 'utf-8 main-header-path)
     (call-process "gtags")))
 
-
+(defun global-gtags--create-temporary-mock-project ()
+  "Create temporary mock project and return its path."
+  (let ((global-tmp-project-directory (make-temp-file
+                                       "global-unit-test-mock-project"
+                                       t)))
+    (global-tags--create-mock-project global-tmp-project-directory)
+    global-tmp-project-directory))
 
 (provide 'global-tests)
 ;;; global-tests.el ends here
