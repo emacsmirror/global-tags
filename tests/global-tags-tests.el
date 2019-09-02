@@ -94,22 +94,36 @@ tags.")
 (describe "quirks"
   (before-each
     (setq global-tmp-project-directory
-          (global-gtags--create-temporary-mock-project)))
+	  (global-gtags--create-temporary-mock-project)))
   (after-each
     (delete-directory global-tmp-project-directory t))
   (it "global --completion does not respect --print0"
     (let ((default-directory global-tmp-project-directory)
-          (completion-tags global-tags--all-tags-in-tests))
+	  (completion-tags global-tags--all-tags-in-tests))
       ;; look how we call global with --print0,
       ;; yet symbols are \n-sepaarated
       (expect (global-tags--get-as-string 'completion '(print0))
-              :to-equal
-              (format "%s\n" (mapconcat 'identity
-                                        completion-tags
-                                        "\n")))
+	      :to-equal
+	      (format "%s\n" (mapconcat 'identity
+				   completion-tags
+				   "\n")))
       (expect (global-tags--get-lines 'completion)
-              :to-equal completion-tags))))
+	      :to-equal completion-tags))))
 
+(describe "tramp"
+  (before-each
+    (setq global-tmp-project-directory
+	  (concat "/ssh:localhost:"
+		  (global-gtags--create-temporary-mock-project))))
+  (after-each
+    (delete-directory global-tmp-project-directory t))
+  (it "root"
+    (expect (file-remote-p global-tmp-project-directory)
+	    :not :to-be nil)
+    (let ((maybe-root (global-tags-try-project-root global-tmp-project-directory)))
+      (expect maybe-root :not :to-be nil)
+      (pcase-let ((`(,tag . ,dir) maybe-root))
+	(expect tag :to-equal 'global)))))
 
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
@@ -164,6 +178,8 @@ int main{
                                        t)))
     (global-tags--create-mock-project global-tmp-project-directory)
     global-tmp-project-directory))
+
+
 
 (provide 'global-tests)
 ;;; global-tests.el ends here
