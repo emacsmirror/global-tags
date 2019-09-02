@@ -52,7 +52,7 @@
 Flags are not contracted.  Returned as list to compose command."
   (pcase command
     (`tag nil)
-    ((or `completion `file `grep `idutils `path `print-dbpath `update)
+    ((or `completion `file `grep `idutils `path `print-dbpath `reference `update)
      (list (format "--%s" (symbol-name command))))
     (_ (error "Unknown command: %s" (symbol-name command)))))
 

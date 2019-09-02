@@ -125,6 +125,16 @@ tags.")
       (pcase-let ((`(,tag . ,dir) maybe-root))
 	(expect tag :to-equal 'global)))))
 
+(describe "usage/API"
+  (before-each
+    (setq global-tmp-project-directory
+	  (global-gtags--create-temporary-mock-project)))
+  (after-each
+    (delete-directory global-tmp-project-directory t))
+  (it "reference"
+    (let ((default-directory global-tmp-project-directory))
+      (expect (global-tags--get-xref-locations "called_fun" 'reference)))))
+
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
   (let* ((default-directory (file-name-as-directory project-path))
