@@ -133,7 +133,8 @@ tags.")
     (delete-directory global-tmp-project-directory t))
   (it "reference"
     (let ((default-directory global-tmp-project-directory))
-      (expect (global-tags--get-xref-locations "called_fun" 'reference)))))
+      (expect (global-tags--get-xref-locations "called_fun" 'reference)
+	      :not :to-be nil))))
 
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
