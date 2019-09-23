@@ -1,9 +1,12 @@
-;;; global-tags.el --- elisp wrapper functions and Emacs integration for GNU global  -*- lexical-binding: t; -*-
+;;; global-tags.el --- Elisp wrapper functions and Emacs integration for GNU global  -*- lexical-binding: t; -*-
 
 ;; Copyright © 2019  Felipe Lema
 
 ;; Author: Felipe Lema <felipelema@mortemale.org>
-;; Keywords:
+;; Keywords: convenience, matching, tools
+;; Package-Requires: ((emacs "26.1"))
+;; URL: https://launchpad.net/global-tags.el
+;; Version: 0.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU Lesser General Public License as published by
@@ -21,7 +24,15 @@
 
 ;;; Commentary:
 
+;; Testeable Emacs Lisp API that wraps GNU global calls and integration to Emacs
+;; using this API with project.el and xref.el
+;; To use with project.el and xref.el, add their "recognize this global handled
+;; project" to the proper places like so:
 ;;
+;; ;; for xref
+;; (add-to-list 'xref-backend-functions 'global-tags-xref-backend)
+;; ;; for project.el
+;; (add-to-list 'project-find-functions 'global-tags-try-project-root)
 
 ;;; Code:
 
