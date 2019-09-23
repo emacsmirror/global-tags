@@ -1,4 +1,4 @@
-;;; global.el --- elisp wrapper functions and Emacs integration for GNU global  -*- lexical-binding: t; -*-
+;;; global-tags.el --- elisp wrapper functions and Emacs integration for GNU global  -*- lexical-binding: t; -*-
 
 ;; Copyright © 2019  Felipe Lema
 
@@ -99,7 +99,7 @@ FLAGS must be plist like
    (global-tags--command-flag command)
    (global-tags--option-flags flags)))
 
-;;; Convenience functions (for developers of global.el)
+;;; Convenience functions (for developers of this package)
 
 (defun global-tags--get-as-string (command &rest flags)
   "Execute global COMMAND with FLAGS.
