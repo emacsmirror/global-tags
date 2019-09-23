@@ -63,7 +63,7 @@
 Flags are not contracted.  Returned as list to compose command."
   (pcase command
     (`tag nil)
-    ((or `completion `file `grep `idutils `path `print-dbpath `update)
+    ((or `completion `file `grep `idutils `path `print-dbpath `reference `update)
      (list (format "--%s" (symbol-name command))))
     (_ (error "Unknown command: %s" (symbol-name command)))))
 
@@ -130,11 +130,11 @@ If inner global command returns non-0, then this function returns nil."
 		  ;; `call-process', but forwarding program-args
 		  ;; 🙄
 		  (apply (apply-partially
-			  'call-process
+			  'process-file
 			  program
-			  nil
-			  `(,standard-output nil)
-			  nil)
+			  nil ;; infile
+			  `(,standard-output nil) ;; dest, ???
+			  nil) ;; display
 			 program-args)))))
     (if (= command-return-code 0)
 	command-output-str)))
@@ -206,9 +206,21 @@ See `global-tags--get-locations'."
 			    (global-tags--get-as-string 'print-dbpath)))
 	    ;; db path is *always* printed with trailing newline
 	    (trimmed-dbpath (substring maybe-dbpath 0
-				       (- (length maybe-dbpath) 1))))
-      (if (file-exists-p trimmed-dbpath)
-	  trimmed-dbpath)))
+				       (- (length maybe-dbpath) 1)))
+	    (maybe-remote-dbpath
+	     (if (file-remote-p default-directory)
+		 (with-parsed-tramp-file-name default-directory nil
+		   (tramp-make-tramp-file-name
+		    (tramp-file-name-method v)
+		    (tramp-file-name-user v)
+		    (tramp-file-name-domain v)
+		    (tramp-file-name-host v)
+		    (tramp-file-name-port v)
+		    trimmed-dbpath
+		    (tramp-file-name-hop v)))
+	       trimmed-dbpath)))
+      (if (file-exists-p maybe-remote-dbpath)
+	  maybe-remote-dbpath)))
 
 ;;; project.el integration
 
