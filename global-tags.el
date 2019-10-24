@@ -52,7 +52,7 @@
 
 ;;;; variables
 
-(defcustom global-tags--global-command
+(defcustom global-tags-global-command
   "global"
   "Name/path to Global executable."
   :type 'string
@@ -121,7 +121,7 @@ FLAGS must be plist like
 FLAGS is a plist.  See `global-tags--get-arguments'.
 
 If inner global command returns non-0, then this function returns nil."
-  (let* ((program-and-args (append `(,global-tags--global-command)
+  (let* ((program-and-args (append `(,global-tags-global-command)
 				   (global-tags--get-arguments
 				    command flags)))
 	 (program (car program-and-args))
@@ -133,7 +133,7 @@ If inner global command returns non-0, then this function returns nil."
 		  ;; `call-process', but forwarding program-args
 		  ;; 🙄
 		  (apply (apply-partially
-			  'process-file
+			  #'process-file
 			  program
 			  nil ;; infile
 			  `(,standard-output nil) ;; dest, ???
