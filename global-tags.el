@@ -1,4 +1,4 @@
-;;; global-tags.el --- Elisp wrapper functions and Emacs integration for GNU global  -*- lexical-binding: t; -*-
+;;; global-tags.el --- Elisp API and editor integration for GNU global  -*- lexical-binding: t; -*-
 
 ;; Copyright © 2019  Felipe Lema
 
@@ -24,7 +24,7 @@
 
 ;;; Commentary:
 
-;; Testeable Emacs Lisp API that wraps GNU global calls and integration to Emacs
+;; Testeable elisp API that wraps GNU global calls and integration to editor
 ;; using this API with project.el and xref.el
 ;; To use with project.el and xref.el, add their "recognize this global handled
 ;; project" to the proper places like so:
@@ -209,15 +209,15 @@ See `global-tags--get-locations'."
 				       (- (length maybe-dbpath) 1)))
 	    (maybe-remote-dbpath
 	     (if (file-remote-p default-directory)
-		 (with-parsed-tramp-file-name default-directory nil
+		 (with-parsed-tramp-file-name default-directory tfn
 		   (tramp-make-tramp-file-name
-		    (tramp-file-name-method v)
-		    (tramp-file-name-user v)
-		    (tramp-file-name-domain v)
-		    (tramp-file-name-host v)
-		    (tramp-file-name-port v)
+		    tfn-method
+		    tfn-user
+		    tfn-domain
+		    tfn-host
+		    tfn-port
 		    trimmed-dbpath
-		    (tramp-file-name-hop v)))
+		    tfn-hop))
 	       trimmed-dbpath)))
       (if (file-exists-p maybe-remote-dbpath)
 	  maybe-remote-dbpath)))
