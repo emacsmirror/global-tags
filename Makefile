@@ -3,7 +3,7 @@
 EMACS ?= emacs
 BEMACS = $(EMACS) -Q -batch
 
-all: test
+all: bytec test
 
 # Use LC_ALL=C to avoid locale dependencies in the dates!
 test:
@@ -11,5 +11,8 @@ test:
 	       -l global-tags.el \
 	       -l tests/global-tags-tests.el \
 	       -f buttercup-run-discover
+bytec:
+	LC_ALL=C $(BEMACS) --eval '(byte-recompile-directory "./")'
+
 
 .PHONY:	all test

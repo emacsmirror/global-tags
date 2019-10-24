@@ -47,6 +47,9 @@
 (require 'subr-x)
 (require 'xref)
 
+(declare-function with-parsed-tramp-file-name 'tramp)
+(declare-function tramp-make-tramp-file-name 'tramp)
+
 ;;;; variables
 
 (defcustom global-tags--global-command
@@ -209,15 +212,16 @@ See `global-tags--get-locations'."
 				       (- (length maybe-dbpath) 1)))
 	    (maybe-remote-dbpath
 	     (if (file-remote-p default-directory)
-		 (with-parsed-tramp-file-name default-directory tfn
-		   (tramp-make-tramp-file-name
-		    tfn-method
-		    tfn-user
-		    tfn-domain
-		    tfn-host
-		    tfn-port
-		    trimmed-dbpath
-		    tfn-hop))
+		 (let (method user domain host port hop) ;; not recognized in some versions
+		   (with-parsed-tramp-file-name default-directory nil
+		     (tramp-make-tramp-file-name
+		      method
+		      user
+		      domain
+		      host
+		      port
+		      trimmed-dbpath
+		      hop)))
 	       trimmed-dbpath)))
       (if (file-exists-p maybe-remote-dbpath)
 	  maybe-remote-dbpath)))
