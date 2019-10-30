@@ -56,7 +56,7 @@
   "global"
   "Name/path to Global executable."
   :type 'string
-  :group 'global)
+  :group 'global-tags)
 
 ;;;; utility functions:
 
