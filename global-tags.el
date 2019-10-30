@@ -47,8 +47,8 @@
 (require 'subr-x)
 (require 'xref)
 
-(declare-function with-parsed-tramp-file-name 'tramp)
-(declare-function tramp-make-tramp-file-name 'tramp)
+(declare-function with-parsed-tramp-file-name "tramp" t t)
+(declare-function tramp-make-tramp-file-name "tramp" t t)
 
 ;;;; variables
 

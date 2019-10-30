@@ -12,3 +12,4 @@
 
 (straight-use-package 'buttercup)
 (straight-use-package 'f)
+(require 'tramp)
