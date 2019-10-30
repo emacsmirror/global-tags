@@ -36,105 +36,105 @@ See `global-tags--create-mock-project' for source code that produces these
 tags.")
 
 (describe "commands and flags"
-  (it "commands with no extra flag"
-    (expect (global-tags--option-flags (list 'definition)) :to-equal '("--definition"))
-    (expect (global-tags--option-flags (list 'absolute)) :to-equal '("--absolute")))
+	  (it "commands with no extra flag"
+	      (expect (global-tags--option-flags (list 'definition)) :to-equal '("--definition"))
+	      (expect (global-tags--option-flags (list 'absolute)) :to-equal '("--absolute")))
 
-  (it "nearness"
-    (expect
-     (global-tags--option-flags (list 'nearness "start")) :to-equal '("--nearness=start")))
+	  (it "nearness"
+	      (expect
+	       (global-tags--option-flags (list 'nearness "start")) :to-equal '("--nearness=start")))
 
-  (it "tag command has no flag"
-    (expect (global-tags--command-flag 'tag) :to-equal '())
-    (expect (global-tags--command-flag 'completion) :to-equal '("--completion")))
+	  (it "tag command has no flag"
+	      (expect (global-tags--command-flag 'tag) :to-equal '())
+	      (expect (global-tags--command-flag 'completion) :to-equal '("--completion")))
 
-  (it "compose commands and flag"
-    (expect
-     (global-tags--get-arguments 'path 'absolute) :to-equal '("--path" "--absolute"))
-    (expect (global-tags--get-arguments 'tag 'absolute) :to-equal '("--absolute"))
-    (expect (global-tags--get-arguments 'print-dbpath) :to-equal '("--print-dbpath")))
+	  (it "compose commands and flag"
+	      (expect
+	       (global-tags--get-arguments 'path 'absolute) :to-equal '("--path" "--absolute"))
+	      (expect (global-tags--get-arguments 'tag 'absolute) :to-equal '("--absolute"))
+	      (expect (global-tags--get-arguments 'print-dbpath) :to-equal '("--print-dbpath")))
 
-  (it "arguments make sense"
-    (expect (mapconcat #'shell-quote-argument
-                       (append `(,global-tags--global-command)
-                               (global-tags--get-arguments 'print-dbpath))
-                       " ")
-            :to-equal (format "%s --print-dbpath" global-tags--global-command))
-    (expect
-     (global-tags--get-as-string 'print-dbpath) :to-equal nil))
-  (it "nil return from invalid command"
-    (expect (global-tags--get-as-string 'file "not-an-existing-file") :to-equal nil))
-  (it "no dbpath"
-    (expect (global-tags--get-dbpath "/") :to-equal nil)))
+	  (it "arguments make sense"
+	      (expect (mapconcat #'shell-quote-argument
+				 (append `(,global-tags-global-command)
+					 (global-tags--get-arguments 'print-dbpath))
+				 " ")
+		      :to-equal (format "%s --print-dbpath" global-tags-global-command))
+	      (expect
+	       (global-tags--get-as-string 'print-dbpath) :to-equal nil))
+	  (it "nil return from invalid command"
+	      (expect (global-tags--get-as-string 'file "not-an-existing-file") :to-equal nil))
+	  (it "no dbpath"
+	      (expect (global-tags--get-dbpath "/") :to-equal nil)))
 
 (describe "internals"
-  (it "parse line"
-    (let-alist (global-tags--get-location "some/file/path/src.cpp:423:static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
-      (expect .description :to-equal "static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
-      (expect .file :to-equal "some/file/path/src.cpp")
-      (expect .line :to-equal 423)))
-  (it "line with empty description (string size 0)"
-    (expect (global-tags--get-location "some_file.cpp:50:")
-            :not :to-be nil)))
+	  (it "parse line"
+	      (let-alist (global-tags--get-location "some/file/path/src.cpp:423:static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
+		(expect .description :to-equal "static void some_fun(uint32_t const& arg1, SomeStruct& _struct, uint32_t& some_value, uint32_t& something)")
+		(expect .file :to-equal "some/file/path/src.cpp")
+		(expect .line :to-equal 423)))
+	  (it "line with empty description (string size 0)"
+	      (expect (global-tags--get-location "some_file.cpp:50:")
+		      :not :to-be nil)))
 
 (describe "reading output"
-  (before-each
-    (setq global-tmp-project-directory
-          (global-gtags--create-temporary-mock-project)))
-  (after-each
-    (delete-directory global-tmp-project-directory t))
-  (it "read files"
-    (let ((default-directory global-tmp-project-directory))
-      (expect (global-tags--get-lines 'path)
-              :to-equal '("main.c" "main.h"))))
-  (it "dbpath read correctly"
-    (expect (global-tags--get-dbpath global-tmp-project-directory)
-            :to-equal global-tmp-project-directory)))
+	  (before-each
+	   (setq global-tmp-project-directory
+		 (global-gtags--create-temporary-mock-project)))
+	  (after-each
+	   (delete-directory global-tmp-project-directory t))
+	  (it "read files"
+	      (let ((default-directory global-tmp-project-directory))
+		(expect (global-tags--get-lines 'path)
+			:to-equal '("main.c" "main.h"))))
+	  (it "dbpath read correctly"
+	      (expect (global-tags--get-dbpath global-tmp-project-directory)
+		      :to-equal global-tmp-project-directory)))
 
 (describe "quirks"
-  (before-each
-    (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)))
-  (after-each
-    (delete-directory global-tmp-project-directory t))
-  (it "global --completion does not respect --print0"
-    (let ((default-directory global-tmp-project-directory)
-	  (completion-tags global-tags--all-tags-in-tests))
-      ;; look how we call global with --print0,
-      ;; yet symbols are \n-sepaarated
-      (expect (global-tags--get-as-string 'completion '(print0))
-	      :to-equal
-	      (format "%s\n" (mapconcat 'identity
-				   completion-tags
-				   "\n")))
-      (expect (global-tags--get-lines 'completion)
-	      :to-equal completion-tags))))
+	  (before-each
+	   (setq global-tmp-project-directory
+		 (global-gtags--create-temporary-mock-project)))
+	  (after-each
+	   (delete-directory global-tmp-project-directory t))
+	  (it "global --completion does not respect --print0"
+	      (let ((default-directory global-tmp-project-directory)
+		    (completion-tags global-tags--all-tags-in-tests))
+		;; look how we call global with --print0,
+		;; yet symbols are \n-sepaarated
+		(expect (global-tags--get-as-string 'completion '(print0))
+			:to-equal
+			(format "%s\n" (mapconcat 'identity
+					     completion-tags
+					     "\n")))
+		(expect (global-tags--get-lines 'completion)
+			:to-equal completion-tags))))
 
 (describe "tramp"
-  (before-each
-    (setq global-tmp-project-directory
-	  (concat "/ssh:localhost:"
-		  (global-gtags--create-temporary-mock-project))))
-  (after-each
-    (delete-directory global-tmp-project-directory t))
-  (it "root"
-    (expect (file-remote-p global-tmp-project-directory)
-	    :not :to-be nil)
-    (let ((maybe-root (global-tags-try-project-root global-tmp-project-directory)))
-      (expect maybe-root :not :to-be nil)
-      (pcase-let ((`(,tag . ,dir) maybe-root))
-	(expect tag :to-equal 'global)))))
+	  (before-each
+	   (setq global-tmp-project-directory
+		 (concat "/ssh:localhost:"
+			 (global-gtags--create-temporary-mock-project))))
+	  (after-each
+	   (delete-directory global-tmp-project-directory t))
+	  (it "root"
+	      (expect (file-remote-p global-tmp-project-directory)
+		      :not :to-be nil)
+	      (let ((maybe-root (global-tags-try-project-root global-tmp-project-directory)))
+		(expect maybe-root :not :to-be nil)
+		(pcase-let ((`(,tag . ,dir) maybe-root))
+		  (expect tag :to-equal 'global)))))
 
 (describe "usage/API"
-  (before-each
-    (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)))
-  (after-each
-    (delete-directory global-tmp-project-directory t))
-  (it "reference"
-    (let ((default-directory global-tmp-project-directory))
-      (expect (global-tags--get-xref-locations "called_fun" 'reference)
-	      :not :to-be nil))))
+	  (before-each
+	   (setq global-tmp-project-directory
+		 (global-gtags--create-temporary-mock-project)))
+	  (after-each
+	   (delete-directory global-tmp-project-directory t))
+	  (it "reference"
+	      (let ((default-directory global-tmp-project-directory))
+		(expect (global-tags--get-xref-locations "called_fun" 'reference)
+			:not :to-be nil))))
 
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
@@ -185,8 +185,8 @@ int main{
 (defun global-gtags--create-temporary-mock-project ()
   "Create temporary mock project and return its path."
   (let ((global-tmp-project-directory (make-temp-file
-                                       "global-unit-test-mock-project"
-                                       t)))
+				       "global-unit-test-mock-project"
+				       t)))
     (global-tags--create-mock-project global-tmp-project-directory)
     global-tmp-project-directory))
 
