@@ -274,7 +274,7 @@ See `project-roots' for 'transient."
 
 (cl-defmethod xref-backend-definitions ((_backend (eql global)) symbol)
   "See `global-tags--get-locations'."
-  (global-tags--get-xref-locations symbol 'tag))
+  (global-tags--get-xref-locations (substring-no-properties symbol) 'tag))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
   (if-let ((symbol-str (thing-at-point 'symbol)))
@@ -284,10 +284,10 @@ See `project-roots' for 'transient."
   (global-tags--get-lines 'completion))
 
 (cl-defmethod xref-backend-references ((_backend (eql global)) symbol)
-  (global-tags--get-xref-locations symbol 'reference))
+  (global-tags--get-xref-locations (substring-no-properties symbol) 'reference))
 
 (cl-defmethod xref-backend-apropos ((_backend (eql global)) symbol)
-  (global-tags--get-xref-locations symbol 'grep))
+  (global-tags--get-xref-locations (substring-no-properties symbol) 'grep))
 
 ;;;; TODO
 ;;;; cache calls (see `tags-completion-table' @ etags.el)
