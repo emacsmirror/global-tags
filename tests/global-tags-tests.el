@@ -155,6 +155,29 @@ tags.")
       (expect (xref-backend-references 'global "this_symbol_does_not_exist")
       	      :to-be nil))))
 
+(describe "user provided"
+  (before-each
+    (setq previous-directory
+	  default-directory)
+    (cd (f-join
+	 (locate-dominating-file default-directory ".git")
+	 "tests" "from_tom")))
+  (after-each
+    (setq default-directory
+	  previous-directory)
+    (cd previous-directory))
+  (it "have-xref"
+    (expect (global-tags-xref-backend)
+	    :to-be 'global))
+  (it "special line" ;; this test does not require the user provided directory
+    (expect (global-tags--get-location
+	     "parser.lua:348:	local r = lpeg.match(proto * -1 + exception , text , 1, state )
+")
+	    :not :to-be nil))
+  (it "lpeg" ;; https://bugs.launchpad.net/global-tags.el/+bug/1850641
+    (expect (xref-backend-references 'global "lpeg")
+	    :not :to-be nil)))
+
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
   (let* ((default-directory (file-name-as-directory project-path))

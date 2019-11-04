@@ -163,18 +163,18 @@ If COMMAND is completion, no print0 is added (global ignores it underneath)."
 Assumes (:result \"grep\").
 Column is always 0."
   (save-match-data
-    (if (string-match (rx line-start
-			  (group (+ (any print))) ;; file
-			  ?: ;; separator
-			  (group (+ (any digit))) ;; line
-			  ?: ;; separator
-			  (group (* (any print))) ;; function
-			  line-end)
-		      line)
-	`((file . ,(match-string 1 line))
-	  (line . ,(string-to-number (match-string 2 line)))
-	  (description . ,(match-string 3 line))
-	  (column . 0)))))
+    (when (string-match (rx line-start
+			    (group (+ (any print))) ;; file
+			    ?: ;; separator
+			    (group (+ (any digit))) ;; line
+			    ?: ;; separator
+			    (group (* (any print blank))) ;; function or line with code
+			    line-end)
+			line)
+      `((file . ,(match-string 1 line))
+	(line . ,(string-to-number (match-string 2 line)))
+	(description . ,(match-string 3 line))
+	(column . 0)))))
 
 (defun global-tags--as-xref-location (location-description)
   "Map LOCATION-DESCRIPTION from `global-tags--get-locations' to xref's repr."
