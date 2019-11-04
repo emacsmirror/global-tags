@@ -213,6 +213,7 @@ See `global-tags--get-locations'."
 	    (maybe-remote-dbpath
 	     (if (file-remote-p default-directory)
 		 (let (method user domain host port hop) ;; not recognized in some versions
+		   (ignore method user domain host port hop)
 		   (with-parsed-tramp-file-name default-directory nil
 		     (tramp-make-tramp-file-name
 		      method
