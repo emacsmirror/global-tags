@@ -148,16 +148,14 @@ If inner global command returns non-0, then this function returns nil."
 Adds (print0) to flags.
 
 If COMMAND is completion, no print0 is added (global ignores it underneath)."
-  (pcase command
-    (`completion
-     (split-string
-      (global-tags--get-as-string command (delete 'print0
-					     flags))
-      "\n" t))
-    (_ (split-string
-	(global-tags--get-as-string command (append '(print0)
-					       flags))
-	"\0" t))))
+  (pcase-let ((`(,separator . ,command-flags)
+	       (pcase command
+		 (`completion
+		  (cons "\n" (delete 'print0 flags)))
+		 (_
+		  (cons "\0" (append '(print0) flags))))))
+    (when-let* ((output (global-tags--get-as-string command command-flags)))
+      (split-string output separator t))))
 
 (defun global-tags--get-location (line)
   "Parse location from LINE.

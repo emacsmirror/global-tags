@@ -136,6 +136,24 @@ tags.")
       (expect (global-tags--get-xref-locations "called_fun" 'reference)
 	      :not :to-be nil))))
 
+(describe "border case"
+  (before-each
+    (setq global-tmp-project-directory
+	  (global-gtags--create-temporary-mock-project)))
+  (after-each
+    (delete-directory global-tmp-project-directory t))
+  (it "empty return" ;; https://bugs.launchpad.net/global-tags.el/+bug/1850641
+    (let ((symbol "this_symbol_does_not_exist")
+	  (kind 'reference))
+      (expect (global-tags--get-lines kind
+				      ;; ↓ see `global-tags--get-location'
+				      'result "grep"
+				      symbol)
+	      :to-be nil)
+      (expect (global-tags--get-locations symbol kind)
+	      :to-be nil)
+      (expect (xref-backend-references 'global "this_symbol_does_not_exist")
+      	      :to-be nil))))
 
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
