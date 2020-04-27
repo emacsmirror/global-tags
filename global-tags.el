@@ -47,9 +47,6 @@
 (require 'subr-x)
 (require 'xref)
 
-(declare-function with-parsed-tramp-file-name "tramp" t t)
-(declare-function tramp-make-tramp-file-name "tramp" t t)
-
 ;;;; variables
 
 (defcustom global-tags-global-command
@@ -203,27 +200,16 @@ See `global-tags--get-locations'."
 
 (defun global-tags--get-dbpath (dir)
   "Filepath for database from DIR or nil."
-  (if-let* ((maybe-dbpath (let ((default-directory dir))
-			    (global-tags--get-as-string 'print-dbpath)))
-	    ;; db path is *always* printed with trailing newline
-	    (trimmed-dbpath (substring maybe-dbpath 0
-				       (- (length maybe-dbpath) 1)))
-	    (maybe-remote-dbpath
-	     (if (file-remote-p default-directory)
-		 (let (method user domain host port hop) ;; not recognized in some versions
-		   (ignore method user domain host port hop)
-		   (with-parsed-tramp-file-name default-directory nil
-		     (tramp-make-tramp-file-name
-		      method
-		      user
-		      domain
-		      host
-		      port
-		      trimmed-dbpath
-		      hop)))
-	       trimmed-dbpath)))
-      (if (file-exists-p maybe-remote-dbpath)
-	  maybe-remote-dbpath)))
+  (when-let* ((maybe-dbpath (let ((default-directory dir))
+                              (global-tags--get-as-string 'print-dbpath)))
+              ;; db path is *always* printed with trailing newline
+              (trimmed-dbpath (substring maybe-dbpath 0
+                                         (- (length maybe-dbpath) 1)))
+              (dbpath (concat
+                       (file-remote-p dir) ;; add remote file prefix when dir is remote
+                       trimmed-dbpath)))
+    (if (file-exists-p dbpath)
+        dbpath)))
 
 ;;; project.el integration
 
