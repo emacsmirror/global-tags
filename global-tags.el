@@ -241,13 +241,27 @@ See `project-roots' for 'transient."
                                           'absolute
                                           pred)))
               dirs)))
-        (complete-with-action action all-files string pred))))))
+        (complete-with-action action
+                              (project--remote-file-names all-files)
+                              string
+                              pred))))))
 
 ;; No need to implement unless necessary
 ;;(cl-defmethod project-external-roots ((project (head global)))
 ;;  )
-;;(cl-defmethod project-files ((project (head global)) &optional dirs)
-;;  )
+(cl-defmethod project-files ((project (head global)) &optional dirs)
+  "Based off `vc' backend method."
+  (let ((files-reported
+         (cl-mapcan
+          (lambda (dir)
+            (let* ((default-directory dir))
+              (global-tags--get-lines 'path
+                                      ;; ↓ project.el deals w/long names
+                                      'absolute)))
+          (or dirs (project-roots project)))))
+    (project--remote-file-names
+     files-reported)))
+
 ;;(cl-defgeneric project-ignores (_project _dir)
 
 ;;; xref.el integration
