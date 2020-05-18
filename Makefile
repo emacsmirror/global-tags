@@ -7,10 +7,11 @@ all: bytec test
 
 # Use LC_ALL=C to avoid locale dependencies in the dates!
 test:
-	LC_ALL=C $(BEMACS) -l tests/setup.el \
+	LC_ALL=C $(BEMACS) \
+	       -l tests/setup.el \
 	       -l global-tags.el \
 	       -l tests/global-tags-tests.el \
-	       -f buttercup-run-discover
+	       -f buttercup-run
 bytec:
 	LC_ALL=C $(BEMACS) --eval '(byte-recompile-directory "./")'
 
