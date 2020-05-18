@@ -148,7 +148,8 @@ tags.")
   (after-each
     (delete-directory global-tmp-project-directory t))
   (it "empty return" ;; https://bugs.launchpad.net/global-tags.el/+bug/1850641
-    (let ((symbol "this_symbol_does_not_exist")
+    (let ((default-directory global-tmp-project-directory)
+          (symbol "this_symbol_does_not_exist")
 	  (kind 'reference))
       (expect (global-tags--get-lines kind
 				      ;; ↓ see `global-tags--get-location'
@@ -164,9 +165,14 @@ tags.")
   (before-each
     (setq previous-directory
 	  default-directory)
-    (cd (f-join
-	 (locate-dominating-file default-directory ".git")
-	 "tests" "from_tom")))
+    (let ((user-provided-directory
+           (f-join
+	    (locate-dominating-file default-directory ".git")
+	    "tests" "from_tom")))
+      (cl-assert (f-exists? user-provided-directory))
+      (cd user-provided-directory)
+      (setq default-directory
+	    user-provided-directory)))
   (after-each
     (setq default-directory
 	  previous-directory)
