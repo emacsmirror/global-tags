@@ -33,6 +33,12 @@
 ;; (add-to-list 'xref-backend-functions 'global-tags-xref-backend)
 ;; ;; for project.el
 ;; (add-to-list 'project-find-functions 'global-tags-try-project-root)
+;; ;; to update database after save
+;; (add-hook 'c++-mode-hook (lambda ()
+;;                            (add-hook 'after-save-hook
+;;                                      #'global-tags-update-database-with-buffer
+;;                                      nil
+;;                                      t)))
 
 ;;; Code:
 
@@ -290,6 +296,38 @@ See `project-roots' for 'transient."
 
 ;;;; TODO
 ;;;; cache calls (see `tags-completion-table' @ etags.el)
+
+;;; update database 
+(cl-defun global-tags-update-database-with-buffer (&optional
+                                                   (buffer (current-buffer)))
+  "Update BUFFER entry in database.
+Requires BUFFER to have a file name (path to file exists)."
+  (with-current-buffer buffer
+    (if (buffer-file-name)
+        (let* ((program-and-args (append `(,global-tags-global-command)
+				         (global-tags--get-arguments
+				          'update `(single-update
+                                                    ,(file-local-name
+                                                      (expand-file-name
+                                                       (buffer-file-name)))))))
+	       (program (car program-and-args))
+	       (program-args (cdr program-and-args))
+	       (command-return-code
+                (apply (apply-partially
+		        #'process-file
+		        program
+		        nil ;; infile
+                        nil ;; discard any output
+		        nil) ;; display
+		       program-args)))
+          (when (= command-return-code 0)
+            (message "Could not update file for buffer %s"
+                     (buffer-name)))
+          command-return-code)
+      ;; else, message that couldn't update
+      (message "Cannot update %s (no filename or no db could be found)"
+               buffer)
+      nil)))
 
 (provide 'global-tags)
 ;;; global-tags.el ends here

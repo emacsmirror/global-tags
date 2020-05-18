@@ -134,7 +134,12 @@ tags.")
   (it "reference"
     (let ((default-directory global-tmp-project-directory))
       (expect (global-tags--get-xref-locations "called_fun" 'reference)
-	      :not :to-be nil))))
+	      :not :to-be nil)))
+  (it "update-db-single-file"
+    (let ((default-directory global-tmp-project-directory))
+      (expect (global-tags-update-database-with-buffer
+               (find-file (f-join default-directory "main.c")))
+	      :to-be 0))))
 
 (describe "border case"
   (before-each
@@ -181,14 +186,8 @@ tags.")
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
   (let* ((default-directory (file-name-as-directory project-path))
-	 (main-file-path (concat
-			  (file-name-as-directory
-			   default-directory)
-			  "main.c"))
-	 (main-header-path (concat
-			    (file-name-as-directory
-			     default-directory)
-			    "main.h"))
+	 (main-file-path (f-join default-directory "main.c"))
+	 (main-header-path (f-join default-directory "main.h"))
 	 (main-header-text "char *header_string;
 int header_int;
 float header_float;
