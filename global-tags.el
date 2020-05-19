@@ -301,6 +301,7 @@ See `project-roots' for 'transient."
 (cl-defun global-tags-update-database-with-buffer (&optional
                                                    (buffer (current-buffer)))
   "Update BUFFER entry in database.
+
 Requires BUFFER to have a file name (path to file exists)."
   (with-current-buffer buffer
     (if (buffer-file-name)
@@ -321,13 +322,12 @@ Requires BUFFER to have a file name (path to file exists)."
 		        nil) ;; display
 		       program-args)))
           (when (= command-return-code 0)
-            (message "Could not update file for buffer %s"
-                     (buffer-name)))
+            (error "Could not update file for buffer %s"
+                   (buffer-name)))
           command-return-code)
       ;; else, message that couldn't update
-      (message "Cannot update %s (no filename or no db could be found)"
-               buffer)
-      nil)))
+      (error "Cannot update %s (no filename or no db could be found)"
+             buffer))))
 
 (provide 'global-tags)
 ;;; global-tags.el ends here
