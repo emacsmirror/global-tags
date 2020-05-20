@@ -225,7 +225,7 @@ int main{
 	 )
     (f-write-text main-file-text 'utf-8 main-file-path)
     (f-write-text main-header-text 'utf-8 main-header-path)
-    (call-process "gtags")))
+    (global-tags-create-database default-directory)))
 
 
 

@@ -61,6 +61,24 @@
   :type 'string
   :group 'global-tags)
 
+(defcustom global-tags-tags-generation-command
+  "gtags"
+  "Name/path to executable to generate tags"
+  :type 'string
+  :group 'global-tags)
+
+(defcustom global-tags-generate-tags-command
+  "gtags"
+  "Name/path to executable to generate tags"
+  :type 'string
+  :group 'global-tags)
+
+(defcustom global-tags-generate-tags-flags
+  '()
+  "command-line flags to `global-tags-tags-generation-command'"
+  :type '(repeat string)
+  :group 'global-tags)
+
 ;;;; utility functions:
 
 (defun global-tags--command-flag (command)
@@ -313,6 +331,23 @@ Requires BUFFER to have a file name (path to file exists)."
                                   ,(file-local-name
                                     (expand-file-name
                                      (buffer-file-name)))))))
+
+;;; creating database
+(defun global-tags-create-database (directory)
+  "Create tags database at DIRECTORY."
+  (interactive "DCreate database at: ")
+  (let ((default-directory directory))
+    (apply 'process-file
+           (append
+            (list
+             global-tags-generate-tags-command
+             nil nil nil)
+            global-tags-generate-tags-flags))))
+
+(defun global-tags-ensure-database ()
+  "Calls `global-tags-create-database' if one db does not exist."
+  (unless (global-tags--get-dbpath default-directory)
+    (call-interactively #'global-tags-create-database)))
 
 (provide 'global-tags)
 ;;; global-tags.el ends here
