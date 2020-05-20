@@ -139,7 +139,7 @@ tags.")
     (let ((default-directory global-tmp-project-directory))
       (expect (global-tags-update-database-with-buffer
                (find-file (f-join default-directory "main.c")))
-	      :to-be 0))))
+	      :not :to-throw))))
 
 (describe "border case"
   (before-each
