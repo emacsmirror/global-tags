@@ -6,7 +6,7 @@
 ;; Keywords: convenience, matching, tools
 ;; Package-Requires: ((emacs "26.1") (async "1.9.4"))
 ;; URL: https://launchpad.net/global-tags.el
-;; Version: 0.1
+;; Version: 0.2
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU Lesser General Public License as published by
