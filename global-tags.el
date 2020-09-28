@@ -4,7 +4,7 @@
 
 ;; Author: Felipe Lema <felipelema@mortemale.org>
 ;; Keywords: convenience, matching, tools
-;; Package-Requires: ((emacs "26.1"))
+;; Package-Requires: ((emacs "26.1") (async "1.9.4"))
 ;; URL: https://launchpad.net/global-tags.el
 ;; Version: 0.1
 
@@ -46,6 +46,7 @@
 (defgroup global-tags nil "GNU global integration"
   :group 'tools)
 
+(require 'async)
 (require 'cl-lib)
 (require 'generator)
 (require 'project)
@@ -315,7 +316,7 @@ See `project-roots' for 'transient."
 ;;;; TODO
 ;;;; cache calls (see `tags-completion-table' @ etags.el)
 
-;;; update database 
+;;; update database
 (cl-defun global-tags-update-database-with-buffer (&optional
                                                    (buffer (current-buffer)))
   "Update BUFFER entry in database.
@@ -348,6 +349,26 @@ Requires BUFFER to have a file name (path to file exists)."
   "Calls `global-tags-create-database' if one db does not exist."
   (unless (global-tags--get-dbpath default-directory)
     (call-interactively #'global-tags-create-database)))
+
+(cl-defun global-tags-update-database (&optional
+                                       (async t))
+  "Calls «global --update».
+When ASYNC is non-nil, call using `async-start'."
+  (interactive)
+  (if (not async)
+      (global-tags--get-as-string 'update)
+    ;; else, run async
+    (async-start
+     `(let ((default-directory ,default-directory)
+            (tramp-use-ssh-controlmaster-options nil) ;; avoid race conditions
+            )
+        (process-file
+         ,global-tags-global-command
+         nil
+         nil
+         nil
+         ,@(global-tags--get-arguments
+            'update))))))
 
 (provide 'global-tags)
 ;;; global-tags.el ends here
