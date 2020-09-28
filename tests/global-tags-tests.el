@@ -163,20 +163,15 @@ tags.")
 
 (describe "user provided"
   (before-each
-    (setq previous-directory
-	  default-directory)
     (let ((user-provided-directory
            (f-join
-	    (locate-dominating-file default-directory ".git")
-	    "tests" "from_tom")))
+	    (locate-dominating-file
+             (symbol-file 'global-gtags--create-temporary-mock-project)
+             ".git")
+            "tests" "from_tom")))
       (cl-assert (f-exists? user-provided-directory))
-      (cd user-provided-directory)
       (setq default-directory
 	    user-provided-directory)))
-  (after-each
-    (setq default-directory
-	  previous-directory)
-    (cd previous-directory))
   (it "have-xref"
     (expect (global-tags-xref-backend)
 	    :to-be 'global))
