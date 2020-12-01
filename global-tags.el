@@ -6,7 +6,7 @@
 ;; Keywords: convenience, matching, tools
 ;; Package-Requires: ((emacs "26.1") (async "1.9.4"))
 ;; URL: https://launchpad.net/global-tags.el
-;; Version: 0.2
+;; Version: 0.3
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU Lesser General Public License as published by
@@ -26,12 +26,20 @@
 
 ;; Testeable elisp API that wraps GNU global calls and integration to editor
 ;; using this API with project.el and xref.el
-;; To use with project.el and xref.el, add their "recognize this global handled
-;; project" to the proper places like so:
+;; You can setup using GNU global as backend with any of the following two
+;; lines:
 ;;
-;; ;; for xref
+;; ;; to use GNU Global automagically, regardless of Emacs default configuration
+;; (add-hook 'ruby-mode-hook #'global-tags-exclusive-backend-mode)
+;; ;; to use GNU Global automagically, respecting other backends
+;; (add-hook 'ruby-mode-hook #'global-tags-shared-backend-mode)
+;;
+;; Alternatively, you can manually configure project.el and xref.el, add their
+;; "recognize this global handled project" to the proper places like so:
+;;
+;; ;; xref (finding definitions, references)
 ;; (add-to-list 'xref-backend-functions 'global-tags-xref-backend)
-;; ;; for project.el
+;; ;; project.el (finding files)
 ;; (add-to-list 'project-find-functions 'global-tags-try-project-root)
 ;; ;; to update database after save
 ;; (add-hook 'c++-mode-hook (lambda ()
@@ -369,6 +377,38 @@ When ASYNC is non-nil, call using `async-start'."
          nil
          ,@(global-tags--get-arguments
             'update))))))
+
+(define-minor-mode global-tags-exclusive-backend-mode
+  "Use GNU Global as exclusive backend for several Emacs features."
+  (cond
+   (global-tags-exclusive-backend-mode
+    (setq-local 'xref-backend-functions '(global-tags-xref-backend))
+    (setq-local 'project-find-functions '(global-tags-try-project-root))
+    (add-hook 'after-save-hook
+              #'global-tags-update-database-with-buffer
+              nil
+              t))
+   (t
+    (setq-local 'xref-backend-functions (default-value 'xref-backend-functions))
+    (setq-local 'project-find-functions (default-value 'project-find-functions))
+    (remove-hook 'after-save-hook
+                 #'global-tags-update-database-with-buffer))))
+
+(define-minor-mode global-tags-shared-backend-mode
+  "Use GNU Global as backend for several Emacs features in this buffer."
+  (cond
+   (global-tags-exclusive-backend-mode
+    (add-hook 'xref-backend-functions 'global-tags-xref-backend 80)
+    (add-hook 'project-find-functions 'global-tags-try-project-root 80)
+    (add-hook 'after-save-hook
+              #'global-tags-update-database-with-buffer
+              nil
+              t))
+   (t
+    (remove-hook 'xref-backend-functions 'xref-backend-functions)
+    (remove-hook 'project-find-functions 'project-find-functions)
+    (remove-hook 'after-save-hook
+                 #'global-tags-update-database-with-buffer))))
 
 (provide 'global-tags)
 ;;; global-tags.el ends here
