@@ -380,6 +380,7 @@ When ASYNC is non-nil, call using `async-start'."
 
 (define-minor-mode global-tags-exclusive-backend-mode
   "Use GNU Global as exclusive backend for several Emacs features."
+  nil nil nil
   (cond
    (global-tags-exclusive-backend-mode
     (setq-local 'xref-backend-functions '(global-tags-xref-backend))
@@ -396,8 +397,9 @@ When ASYNC is non-nil, call using `async-start'."
 
 (define-minor-mode global-tags-shared-backend-mode
   "Use GNU Global as backend for several Emacs features in this buffer."
+  nil nil nil
   (cond
-   (global-tags-exclusive-backend-mode
+   (global-tags-shared-backend-mode
     (add-hook 'xref-backend-functions 'global-tags-xref-backend 80)
     (add-hook 'project-find-functions 'global-tags-try-project-root 80)
     (add-hook 'after-save-hook
