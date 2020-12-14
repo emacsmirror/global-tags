@@ -8,12 +8,14 @@ all: bytec test
 # Use LC_ALL=C to avoid locale dependencies in the dates!
 test:
 	LC_ALL=C $(BEMACS) \
-	       -l tests/setup.el \
-	       -l global-tags.el \
-	       -l tests/global-tags-tests.el \
-	       -f buttercup-run
+              -l tests/setup.el \
+              -l global-tags.el \
+              -l tests/global-tags-tests.el \
+              -f buttercup-run
 bytec:
-	LC_ALL=C $(BEMACS) --eval '(byte-recompile-directory "./")'
+	LC_ALL=C $(BEMACS) \
+	    --eval '(setq byte-compile-error-on-warn t)' \
+	    --eval '(byte-recompile-directory "./")'
 
 
 .PHONY:	all test
