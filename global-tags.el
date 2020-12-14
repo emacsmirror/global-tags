@@ -383,15 +383,15 @@ When ASYNC is non-nil, call using `async-start'."
   nil nil nil
   (cond
    (global-tags-exclusive-backend-mode
-    (setq-local 'xref-backend-functions '(global-tags-xref-backend))
-    (setq-local 'project-find-functions '(global-tags-try-project-root))
+    (setq-local xref-backend-functions '(global-tags-xref-backend))
+    (setq-local project-find-functions '(global-tags-try-project-root))
     (add-hook 'after-save-hook
               #'global-tags-update-database-with-buffer
               nil
               t))
    (t
-    (setq-local 'xref-backend-functions (default-value 'xref-backend-functions))
-    (setq-local 'project-find-functions (default-value 'project-find-functions))
+    (setq-local xref-backend-functions (default-value 'xref-backend-functions))
+    (setq-local project-find-functions (default-value 'project-find-functions))
     (remove-hook 'after-save-hook
                  #'global-tags-update-database-with-buffer))))
 
@@ -400,15 +400,15 @@ When ASYNC is non-nil, call using `async-start'."
   nil nil nil
   (cond
    (global-tags-shared-backend-mode
-    (add-hook 'xref-backend-functions 'global-tags-xref-backend 80)
-    (add-hook 'project-find-functions 'global-tags-try-project-root 80)
+    (add-hook 'xref-backend-functions 'global-tags-xref-backend 80 t)
+    (add-hook 'project-find-functions 'global-tags-try-project-root 80 t)
     (add-hook 'after-save-hook
               #'global-tags-update-database-with-buffer
               nil
               t))
    (t
-    (remove-hook 'xref-backend-functions 'xref-backend-functions)
-    (remove-hook 'project-find-functions 'project-find-functions)
+    (remove-hook 'xref-backend-functions 'global-tags-xref-backend t)
+    (remove-hook 'project-find-functions 'global-tags-try-project-root t)
     (remove-hook 'after-save-hook
                  #'global-tags-update-database-with-buffer))))
 
