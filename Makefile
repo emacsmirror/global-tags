@@ -16,6 +16,7 @@ test:
 lint:
 	LC_ALL=C bash ./emacs-sandbox.sh \
 	    --dir .sandbox-$(shell md5sum /etc/os-release | cut -d \  -f 1) \
+	    --install project \
 	    --install package-lint \
 	    -- \
 	    -Q --batch \

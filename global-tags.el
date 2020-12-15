@@ -4,7 +4,7 @@
 
 ;; Author: Felipe Lema <felipelema@mortemale.org>
 ;; Keywords: convenience, matching, tools
-;; Package-Requires: ((emacs "26.1") (async "1.9.4"))
+;; Package-Requires: ((emacs "26.1") (async "1.9.4") (project "0.5.2"))
 ;; URL: https://launchpad.net/global-tags.el
 ;; Version: 0.3
 
@@ -245,17 +245,25 @@ See `global-tags--get-locations'."
         dbpath)))
 
 ;;; project.el integration
+(defun global-tags--remote-file-names (local-files)
+  "Like `project--remote-file-names', but without having to require Emacs 27."
+  (seq-map
+   (lambda (local-file)
+     (concat
+      (file-remote-p default-directory)
+      local-file))
+   local-files))
 
 (defun global-tags-try-project-root (dir)
   "Project root for DIR if it exists."
   (if-let* ((dbpath (global-tags--get-dbpath dir)))
       (cons 'global dbpath)))
 
-(cl-defmethod project-roots ((project (head global)))
+(cl-defmethod project-root ((project (head global)))
   "Default implementation.
 
-See `project-roots' for 'transient."
-  (list (cdr project)))
+See `project-root' for 'transient."
+  (cdr project))
 
 (cl-defmethod project-file-completion-table ((project (head global)) dirs)
   "See documentation for `project-file-completion-table'."
@@ -275,7 +283,7 @@ See `project-roots' for 'transient."
                                           pred)))
               dirs)))
         (complete-with-action action
-                              (project--remote-file-names all-files)
+                              (global-tags--remote-file-names all-files)
                               string
                               pred))))))
 
@@ -292,7 +300,7 @@ See `project-roots' for 'transient."
                                       ;; ↓ project.el deals w/long names
                                       'absolute)))
           (or dirs (project-roots project)))))
-    (project--remote-file-names
+    (global-tags--remote-file-names
      files-reported)))
 
 ;;(cl-defgeneric project-ignores (_project _dir)
