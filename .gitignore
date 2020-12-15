@@ -1,0 +1,9 @@
+# ---> Elisp
+# Compiled
+*.elc
+
+# Backup files
+*~
+
+# sandoxed emacs directory
+.sandbox-*
