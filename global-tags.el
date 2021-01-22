@@ -375,16 +375,17 @@ When ASYNC is non-nil, call using `async-start'."
       (global-tags--get-as-string 'update)
     ;; else, run async
     (async-start
-     `(let ((default-directory ,default-directory)
-            (tramp-use-ssh-controlmaster-options nil) ;; avoid race conditions
-            )
-        (process-file
-         ,global-tags-global-command
-         nil
-         nil
-         nil
-         ,@(global-tags--get-arguments
-            'update))))))
+     `(lambda ()
+        (let ((default-directory ,default-directory)
+              (tramp-use-ssh-controlmaster-options nil)) ;; avoid race conditions
+          (process-file
+           ,global-tags-global-command
+           nil
+           nil
+           nil
+           ,@(global-tags--get-arguments
+              'update))))
+     'ignore)))
 
 (define-minor-mode global-tags-exclusive-backend-mode
   "Use GNU Global as exclusive backend for several Emacs features."
