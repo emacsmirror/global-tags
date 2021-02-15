@@ -61,9 +61,9 @@ tags.")
 		       " ")
 	    :to-equal (format "%s --print-dbpath" global-tags-global-command))
     (expect
-     (global-tags--get-as-string 'print-dbpath) :to-equal nil))
+     (global-tags--get-lines 'print-dbpath) :to-equal nil))
   (it "nil return from invalid command"
-    (expect (global-tags--get-as-string 'file "not-an-existing-file") :to-equal nil))
+    (expect (global-tags--get-lines 'file "not-an-existing-file") :to-equal nil))
   (it "no dbpath"
     (expect (global-tags--get-dbpath "/") :to-equal nil)))
 
@@ -102,11 +102,11 @@ tags.")
 	  (completion-tags global-tags--all-tags-in-tests))
       ;; look how we call global with --print0,
       ;; yet symbols are \n-sepaarated
-      (expect (global-tags--get-as-string 'completion '(print0))
+      (expect (global-tags--get-lines 'completion '(print0))
 	      :to-equal
 	      (format "%s\n" (mapconcat 'identity
-				   completion-tags
-				   "\n")))
+				        completion-tags
+				        "\n")))
       (expect (global-tags--get-lines 'completion)
 	      :to-equal completion-tags))))
 

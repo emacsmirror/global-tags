@@ -143,34 +143,69 @@ FLAGS must be plist like
    (global-tags--command-flag command)
    (global-tags--option-flags flags)))
 
+(defun global-tags--ensured-correct-separator (command flags)
+  "Return FLAGS with correct separator parameter.
+
+'completion is always separated by \\n.  Everything else is separated by \\0."
+  (pcase command
+    (`completion
+     (delete 'print0 flags))
+    (_
+     (append '(print0) flags))))
+
 ;;; Convenience functions (for developers of this package)
+(defun global-tags--line-separator (command)
+  "Get line (candidate) separator chararcter for the command output.
 
-(defun global-tags--get-as-string (command &rest flags)
-  "Execute global COMMAND with FLAGS.
+'completion will _always_ be separated by \\n.  The rest is assumed to be
+separated by \\0.
+"
+  (pcase command
+    (`completion
+     "\n")
+    (_
+     "\0")))
 
-FLAGS is a plist.  See `global-tags--get-arguments'.
+(defun global-tags--get-lines-future (command ignore-result &rest command-flags)
+  "Return an `async' future that will hold the returned lines of running COMMAND COMMAND-FLAGS.
 
-If inner global command returns non-0, then this function returns nil."
-  (let* ((program-and-args (append `(,global-tags-global-command)
-				   (global-tags--get-arguments
-				    command flags)))
-	 (program (car program-and-args))
-	 (program-args (cdr program-and-args))
-	 (command-return-code)
-	 (command-output-str
-	  (with-output-to-string
-	    (setq command-return-code
-		  ;; `call-process', but forwarding program-args
-		  ;; 🙄
-		  (apply (apply-partially
-			  #'process-file
-			  program
-			  nil ;; infile
-			  `(,standard-output nil) ;; dest, ???
-			  nil) ;; display
-			 program-args)))))
-    (if (= command-return-code 0)
-	command-output-str)))
+The future returns (cons return-code list-of-lines)
+
+If you don't want the results, set IGNORE-RESULT to non-nil."
+  (let* ((line-separator (global-tags--line-separator command))
+         (program-and-args
+          ;; TODO get rid of this variable (pack it in separate function)
+          (append `(,global-tags-global-command)
+		  (global-tags--get-arguments
+                   command
+                   (global-tags--ensured-correct-separator
+                    command
+                    command-flags))))
+         (program (car program-and-args))
+         (program-args (cdr program-and-args)))
+    (async-start
+     `(lambda ()
+        (require 'simple)
+        (let ((tramp-use-ssh-controlmaster-options nil) ;; avoid race conditions
+              (default-directory ,default-directory)
+	      (command-return-code))
+          (let ((command-output-str
+	         (with-output-to-string
+	           (setq command-return-code
+		         ;; `call-process', but forwarding program-args
+		         ;; 🙄
+		         (process-file
+		          ,program
+		          nil ;; infile
+		          (list standard-output nil) ;; dest, ???
+		          nil ;; display
+		          ,@program-args)))))
+            (cons
+             command-return-code
+             (when command-output-str
+               (split-string command-output-str ,line-separator t))))))
+     (when ignore-result
+       'ignore))))
 
 (defun global-tags--get-lines (command &rest flags)
   "Break global COMMAND FLAGS output into lines.
@@ -178,14 +213,16 @@ If inner global command returns non-0, then this function returns nil."
 Adds (print0) to flags.
 
 If COMMAND is completion, no print0 is added (global ignores it underneath)."
-  (pcase-let ((`(,separator . ,command-flags)
-	       (pcase command
-		 (`completion
-		  (cons "\n" (delete 'print0 flags)))
-		 (_
-		  (cons "\0" (append '(print0) flags))))))
-    (when-let* ((output (global-tags--get-as-string command command-flags)))
-      (split-string output separator t))))
+  (pcase-let* ((lines-future (apply #'global-tags--get-lines-future
+                                    (append
+                                     (list
+                                      command
+                                      nil)
+                                     flags)))
+               (`(,command-return-code . ,lines)
+                (async-get lines-future)))
+    (if (= command-return-code 0)
+        lines)))
 
 (defun global-tags--get-location (line)
   "Parse location from LINE.
@@ -217,12 +254,13 @@ Column is always 0."
 (defun global-tags--get-locations (symbol &optional kind)
   "Get locations according to SYMBOL and KIND.
 
-If KIND is omitted, will do \"tag\" search."
-  (let ((lines (global-tags--get-lines kind
-                                       ;; ↓ see `global-tags--get-location'
-                                       'result "grep"
-                                       symbol)))
-    (cl-mapcar #'global-tags--get-location lines)))
+If KIND is omitted, global will do a \"tag\" search."
+  (thread-last
+      (global-tags--get-lines kind
+                              ;; ↓ see `global-tags--get-location'
+                              'result "grep"
+                              symbol)
+    (cl-mapcar #'global-tags--get-location)))
 
 (defun global-tags--get-xref-locations (symbol kind)
   "Get xref locations according to KIND using SYMBOL as query.
@@ -234,7 +272,8 @@ See `global-tags--get-locations'."
 (defun global-tags--get-dbpath (dir)
   "Filepath for database from DIR or nil."
   (when-let* ((maybe-dbpath (let ((default-directory dir))
-                              (global-tags--get-as-string 'print-dbpath)))
+                              (car
+                               (global-tags--get-lines 'print-dbpath))))
               ;; db path is *always* printed with trailing newline
               (trimmed-dbpath (substring maybe-dbpath 0
                                          (- (length maybe-dbpath) 1)))
@@ -343,11 +382,12 @@ Requires BUFFER to have a file name (path to file exists)."
       ;; don't update a buffer that doesn't exist
       (error "Cannot update %s (no filename)"
              buffer))
-    (global-tags--get-as-string 'update
-                                `(single-update
-                                  ,(file-local-name
+    (global-tags--get-lines-future 'update
+                                   t ;; ignore result
+                                   'single-update
+                                   (file-local-name
                                     (expand-file-name
-                                     (buffer-file-name)))))))
+                                     (buffer-file-name))))))
 
 ;;; creating database
 (defun global-tags-create-database (directory)
@@ -372,7 +412,7 @@ Requires BUFFER to have a file name (path to file exists)."
 When ASYNC is non-nil, call using `async-start'."
   (interactive)
   (if (not async)
-      (global-tags--get-as-string 'update)
+      (global-tags--get-lines-future 'update)
     ;; else, run async
     (async-start
      `(lambda ()
