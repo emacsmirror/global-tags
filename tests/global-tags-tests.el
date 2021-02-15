@@ -98,15 +98,10 @@ tags.")
   (after-each
     (delete-directory global-tmp-project-directory t))
   (it "global --completion does not respect --print0"
+    ;; we're explicitly testing --completion to make sure it works
+    ;; _regardless_ of not using --print0 underneath
     (let ((default-directory global-tmp-project-directory)
 	  (completion-tags global-tags--all-tags-in-tests))
-      ;; look how we call global with --print0,
-      ;; yet symbols are \n-sepaarated
-      (expect (global-tags--get-lines 'completion '(print0))
-	      :to-equal
-	      (format "%s\n" (mapconcat 'identity
-				        completion-tags
-				        "\n")))
       (expect (global-tags--get-lines 'completion)
 	      :to-equal completion-tags))))
 
