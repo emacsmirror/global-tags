@@ -326,15 +326,17 @@ Root is path returned by `global-tags--get-dbpath'.  Lines future is returned by
             (append (list command nil)
                     args)))))
 
-(defgeneric global-tags--ensure-next-fetch-is-queued (project command args)
+(cl-defgeneric global-tags--ensure-next-fetch-is-queued (project command args)
   "Queue next future only on selected (defmethod) parameters.")
-(defmethod global-tags--ensure-next-fetch-is-queued ((project global-tags-project) command args)
+(cl-defmethod global-tags--ensure-next-fetch-is-queued ((project global-tags-project) command args)
   "Don't queue any «next fetch»")
 
 (defconst global-tags--commands-and-args-that-allow-prefetch
-  '()
+  '((path absolute)
+    (completion))
   "Each (list COMMAND ARG0 ARG1 …) that will be pre-fetched and stored in `global-tags--pre-fetching-futures'.")
-(defmethod global-tags--ensure-next-fetch-is-queued ((project global-tags-project-with-pre-fetched-lines) command args)
+
+(cl-defmethod global-tags--ensure-next-fetch-is-queued ((project global-tags-project-with-pre-fetched-lines) command args)
   (let ((command-and-args
          (append (list command)
                  args)))
@@ -372,9 +374,18 @@ Root is path returned by `global-tags--get-dbpath'.  Lines future is returned by
 ;;;; connect to API
 (defun global-tags-try-project-root (dir)
   "Project root for DIR if it exists."
-  (if-let* ((dbpath (global-tags--get-dbpath dir)))
-      (global-tags-project
-       :root dbpath)))
+  (when-let* ((dbpath (global-tags--get-dbpath dir))
+              (project
+               ;; ↓ default to launch pre-fetches
+               (global-tags-project-with-pre-fetched-lines
+                :root dbpath)))
+    ;; ↓ won't prefetch if `global-tags--ensure-next-fetch-is-queued'
+    ;;   method for project does not says so
+    (cl-loop for command-and-flags in global-tags--commands-and-args-that-allow-prefetch
+             do
+             (pcase-let* ((`(,command ,flags) command-and-flags))
+               (global-tags--ensure-next-fetch-is-queued project command flags)))
+    project))
 
 (cl-defmethod project-root ((project global-tags-project))
   "Default implementation.
