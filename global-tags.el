@@ -312,45 +312,18 @@ See `global-tags--get-locations'."
 See `project-root' for 'transient."
   (oref project root))
 
-(cl-defmethod project-file-completion-table ((project global-tags-project) dirs)
-  "See documentation for `project-file-completion-table'."
-  (ignore project)
-  (lambda (string pred action)
-    (cond
-     ((eq action 'metadata)
-      '(metadata . ((category . project-file))))
-     (t
-      (let ((all-files
-             (cl-mapcan
-              (lambda (dir)
-                (let* ((default-directory dir))
-                  (global-tags--get-lines 'path
-                                          ;; ↓ project.el deals w/long names
-                                          'absolute
-                                          pred)))
-              dirs)))
-        (complete-with-action action
-                              (global-tags--remote-file-names all-files)
-                              string
-                              pred))))))
-
 ;; No need to implement unless necessary
 ;;(cl-defmethod project-external-roots ((project (head global)))
 ;;  )
-(cl-defmethod project-files ((project global-tags-project) &optional dirs)
-  "Based off `vc' backend method."
-  (let ((files-reported
-         (cl-mapcan
-          (lambda (dir)
-            (let* ((default-directory dir))
-              (global-tags--get-lines 'path
-                                      ;; ↓ project.el deals w/long names
-                                      'absolute)))
-          (or dirs
-              (list
-               (project-root project))))))
-    (global-tags--remote-file-names
-     files-reported)))
+(cl-defmethod project-files ((project global-tags-project) &optional _dirs)
+  "Based off `vc' backend method.
+
+_DIRS is ignored."
+  (global-tags--remote-file-names
+   (global-tags--project-get-lines project
+                                   'path
+                                   ;; ↓ project.el deals w/long names
+                                   'absolute)))
 
 ;;(cl-defgeneric project-ignores (_project _dir)
 
