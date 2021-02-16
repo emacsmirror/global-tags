@@ -353,7 +353,16 @@ Root is path returned by `global-tags--get-dbpath'.  Lines future is returned by
 
 
 (defun global-tags--project-get-lines (project command &rest flags)
-  "TODO: doc me"
+  "Get lines for running COMMAND FLAGS.
+
+Forward PROJECT to `global-tags--ensure-next-fetch-is-queued'.
+
+If a future for COMMAND FLAGS was previously queued in
+`global-tags--pre-fetching-futures', it will use that.
+
+Whatever is used, `global-tags--ensure-next-fetch-is-queued' is called to
+(maybe, according to method) ensure the next call for COMMAND FLAGS will be
+pre-fetched."
   (let* ((this-key
           (global-tags--pre-fetch-key project command flags))
          (this-prefetched
