@@ -4,7 +4,7 @@
 
 ;; Author: Felipe Lema <felipelema@mortemale.org>
 ;; Keywords: convenience, matching, tools
-;; Package-Requires: ((emacs "26.1") (async "1.9.4") (project "0.5.2"))
+;; Package-Requires: ((emacs "26.1") (async "1.9.4") (project "0.5.2") (ht "2.3"))
 ;; URL: https://launchpad.net/global-tags.el
 ;; Version: 0.3
 
@@ -57,6 +57,7 @@
 (require 'async)
 (require 'cl-lib)
 (require 'generator)
+(require 'ht)
 (require 'project)
 (require 'rx)
 (require 'subr-x)
@@ -89,7 +90,6 @@
   :group 'global-tags)
 
 ;;;; utility functions:
-
 (defun global-tags--command-flag (command)
   "Get command line flag for COMMAND as string-or-nil.
 
@@ -221,8 +221,8 @@ If COMMAND is completion, no print0 is added (global ignores it underneath)."
                                      flags)))
                (`(,command-return-code . ,lines)
                 (async-get lines-future)))
-    (if (= command-return-code 0)
-        lines)))
+    (when (= command-return-code 0)
+      lines)))
 
 (defun global-tags--get-location (line)
   "Parse location from LINE.
@@ -298,6 +298,76 @@ See `global-tags--get-locations'."
   ((root
     :initarg :root))
   "Base class for all project.el and xref defmethods.")
+(defclass global-tags-project-with-pre-fetched-lines (global-tags-project)
+  ()
+  "Backend / project type to mark usage of pre-fetched data.")
+
+(defvar global-tags--pre-fetching-futures
+  (make-hash-table :test 'equal)
+  "(project-root . command-and-args) → lines future.
+
+Root is path returned by `global-tags--get-dbpath'.  Lines future is returned by
+`global-tags--get-lines-future'")
+
+(defun global-tags--pre-fetch-key (project command args)
+  "Get a key for `global-tags--pre-fetching-futures'."
+  (cons
+   (project-root project)
+   (append (list command)
+           args)))
+
+(defun global-tags--queue-next (project command args)
+  "Always set next future for arguments."
+  (ht-set
+   global-tags--pre-fetching-futures
+   (global-tags--pre-fetch-key project command args)
+   (let ((default-directory (oref project root)))
+     (apply #'global-tags--get-lines-future
+            (append (list command nil)
+                    args)))))
+
+(defgeneric global-tags--ensure-next-fetch-is-queued (project command args)
+  "Queue next future only on selected (defmethod) parameters.")
+(defmethod global-tags--ensure-next-fetch-is-queued ((project global-tags-project) command args)
+  "Don't queue any «next fetch»")
+
+(defconst global-tags--commands-and-args-that-allow-prefetch
+  '()
+  "Each (list COMMAND ARG0 ARG1 …) that will be pre-fetched and stored in `global-tags--pre-fetching-futures'.")
+(defmethod global-tags--ensure-next-fetch-is-queued ((project global-tags-project-with-pre-fetched-lines) command args)
+  (let ((command-and-args
+         (append (list command)
+                 args)))
+    (when (member command-and-args global-tags--commands-and-args-that-allow-prefetch)
+      (global-tags--queue-next project command args))))
+
+(defun global-tags--ensure-queued (project command args)
+  "If key is empty in `global-tags--pre-fetching-futures', call `global-tags--queue-next'."
+  (unless (ht-get global-tags--pre-fetching-futures (global-tags--pre-fetch-key project command args))
+    (global-tags--queue-next project command args)))
+
+
+(defun global-tags--project-get-lines (project command &rest flags)
+  "TODO: doc me"
+  (let* ((this-key
+          (global-tags--pre-fetch-key project command flags))
+         (this-prefetched
+          (ht-get global-tags--pre-fetching-futures
+                  this-key)))
+    ;; set next future before returning
+    (global-tags--ensure-next-fetch-is-queued project command flags)
+    (unless this-prefetched
+      ;; set to an actual future if there wasn't a previous one running in background
+      (setq this-prefetched
+            (let ((default-directory (oref project root)))
+              (apply #'global-tags--get-lines-future
+                     (append (list command nil)
+                             flags)))))
+    ;; return from whatever future we had
+    (pcase-let* ((`(,command-return-code . ,lines)
+                  (async-get this-prefetched)))
+      (when (= command-return-code 0)
+        lines))))
 
 ;;;; connect to API
 (defun global-tags-try-project-root (dir)
@@ -342,8 +412,8 @@ Redirects to `global-tags-try-project-root'"
   (if-let ((symbol-str (thing-at-point 'symbol)))
       symbol-str))
 
-(cl-defmethod xref-backend-identifier-completion-table ((_backend global-tags-project))
-  (global-tags--get-lines 'completion))
+(cl-defmethod xref-backend-identifier-completion-table ((backend global-tags-project))
+  (global-tags--project-get-lines backend 'completion))
 
 (cl-defmethod xref-backend-references ((_backend global-tags-project) symbol)
   (global-tags--get-xref-locations (substring-no-properties symbol) 'reference))

@@ -13,4 +13,5 @@
 (straight-use-package 'async)
 (straight-use-package 'buttercup)
 (straight-use-package 'f)
+(straight-use-package 'ht)
 (require 'tramp)
