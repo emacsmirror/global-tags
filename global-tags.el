@@ -284,6 +284,7 @@ See `global-tags--get-locations'."
         dbpath)))
 
 ;;; project.el integration
+;;;; utilities
 (defun global-tags--remote-file-names (local-files)
   "Like `project--remote-file-names', but without having to require Emacs 27."
   (seq-map
@@ -293,18 +294,25 @@ See `global-tags--get-locations'."
       local-file))
    local-files))
 
+(defclass global-tags-project ()
+  ((root
+    :initarg :root))
+  "Base class for all project.el and xref defmethods.")
+
+;;;; connect to API
 (defun global-tags-try-project-root (dir)
   "Project root for DIR if it exists."
   (if-let* ((dbpath (global-tags--get-dbpath dir)))
-      (cons 'global dbpath)))
+      (global-tags-project
+       :root dbpath)))
 
-(cl-defmethod project-root ((project (head global)))
+(cl-defmethod project-root ((project global-tags-project))
   "Default implementation.
 
 See `project-root' for 'transient."
-  (cdr project))
+  (oref project root))
 
-(cl-defmethod project-file-completion-table ((project (head global)) dirs)
+(cl-defmethod project-file-completion-table ((project global-tags-project) dirs)
   "See documentation for `project-file-completion-table'."
   (ignore project)
   (lambda (string pred action)
@@ -329,7 +337,7 @@ See `project-root' for 'transient."
 ;; No need to implement unless necessary
 ;;(cl-defmethod project-external-roots ((project (head global)))
 ;;  )
-(cl-defmethod project-files ((project (head global)) &optional dirs)
+(cl-defmethod project-files ((project global-tags-project) &optional dirs)
   "Based off `vc' backend method."
   (let ((files-reported
          (cl-mapcan
@@ -338,34 +346,36 @@ See `project-root' for 'transient."
               (global-tags--get-lines 'path
                                       ;; ↓ project.el deals w/long names
                                       'absolute)))
-          (or dirs (project-roots project)))))
+          (or dirs
+              (list
+               (project-root project))))))
     (global-tags--remote-file-names
      files-reported)))
 
 ;;(cl-defgeneric project-ignores (_project _dir)
 
 ;;; xref.el integration
-
 (defun global-tags-xref-backend ()
-  "Xref backend for using global."
-  (if (global-tags--get-dbpath default-directory)
-      'global))
+  "Xref backend for using global.
 
-(cl-defmethod xref-backend-definitions ((_backend (eql global)) symbol)
+Redirects to `global-tags-try-project-root'"
+  (global-tags-try-project-root default-directory))
+
+(cl-defmethod xref-backend-definitions ((_backend global-tags-project) symbol)
   "See `global-tags--get-locations'."
   (global-tags--get-xref-locations (substring-no-properties symbol) 'tag))
 
-(cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
+(cl-defmethod xref-backend-identifier-at-point ((_backend global-tags-project))
   (if-let ((symbol-str (thing-at-point 'symbol)))
       symbol-str))
 
-(cl-defmethod xref-backend-identifier-completion-table ((_backend (eql global)))
+(cl-defmethod xref-backend-identifier-completion-table ((_backend global-tags-project))
   (global-tags--get-lines 'completion))
 
-(cl-defmethod xref-backend-references ((_backend (eql global)) symbol)
+(cl-defmethod xref-backend-references ((_backend global-tags-project) symbol)
   (global-tags--get-xref-locations (substring-no-properties symbol) 'reference))
 
-(cl-defmethod xref-backend-apropos ((_backend (eql global)) symbol)
+(cl-defmethod xref-backend-apropos ((_backend global-tags-project) symbol)
   (global-tags--get-xref-locations (substring-no-properties symbol) 'grep))
 
 ;;;; TODO

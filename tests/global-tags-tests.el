@@ -131,7 +131,8 @@ tags.")
   (it "empty return" ;; https://bugs.launchpad.net/global-tags.el/+bug/1850641
     (let ((default-directory global-tmp-project-directory)
           (symbol "this_symbol_does_not_exist")
-	  (kind 'reference))
+          (xref-backend-functions '(global-tags-xref-backend))
+          (kind 'reference))
       (expect (global-tags--get-lines kind
 				      ;; ↓ see `global-tags--get-location'
 				      'result "grep"
@@ -139,7 +140,7 @@ tags.")
 	      :to-be nil)
       (expect (global-tags--get-locations symbol kind)
 	      :to-be nil)
-      (expect (xref-backend-references 'global "this_symbol_does_not_exist")
+      (expect (xref-backend-references (xref-find-backend) "this_symbol_does_not_exist")
       	      :to-be nil))))
 
 (describe "project.el integration"
@@ -211,19 +212,24 @@ tags.")
              ".git")
             "tests" "from_tom")))
       (cl-assert (f-exists? user-provided-directory))
-      (setq default-directory
-	    user-provided-directory)))
+      (setq default-directory user-provided-directory
+            xref-backend-functions '(global-tags-xref-backend))))
+  (after-each
+    (setq xref-backend-functions (default-value 'xref-backend-functions)))
   (it "have-xref"
-    (expect (global-tags-xref-backend)
-	    :to-be 'global))
+    (expect (xref-find-backend)
+	    :not :to-be nil))
   (it "special line" ;; this test does not require the user provided directory
     (expect (global-tags--get-location
 	     "parser.lua:348:	local r = lpeg.match(proto * -1 + exception , text , 1, state )
 ")
 	    :not :to-be nil))
   (it "lpeg" ;; https://bugs.launchpad.net/global-tags.el/+bug/1850641
-    (expect (xref-backend-references 'global "lpeg")
+    (expect (xref-backend-references (global-tags-xref-backend) "lpeg")
 	    :not :to-be nil)))
+
+'(describe "xref und project.el integration, but using pre-fetch"
+   (error "WIP"))
 
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
