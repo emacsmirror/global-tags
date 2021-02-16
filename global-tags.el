@@ -165,6 +165,17 @@ separated by \\0.
      "\n")
     (_
      "\0")))
+(defun global-tags--translate-to-command-line (command command-flags)
+  "Translate COMMAND COMMAND-FLAGS to a command line.
+
+Returns a list with (global-binary ARG0 ARG1 …)."
+  (cons
+   global-tags-global-command
+   (global-tags--get-arguments
+    command
+    (global-tags--ensured-correct-separator
+     command
+     command-flags))))
 
 (defun global-tags--get-lines-future (command ignore-result &rest command-flags)
   "Return an `async' future that will hold the returned lines of running COMMAND COMMAND-FLAGS.
@@ -172,17 +183,9 @@ separated by \\0.
 The future returns (cons return-code list-of-lines)
 
 If you don't want the results, set IGNORE-RESULT to non-nil."
-  (let* ((line-separator (global-tags--line-separator command))
-         (program-and-args
-          ;; TODO get rid of this variable (pack it in separate function)
-          (append `(,global-tags-global-command)
-		  (global-tags--get-arguments
-                   command
-                   (global-tags--ensured-correct-separator
-                    command
-                    command-flags))))
-         (program (car program-and-args))
-         (program-args (cdr program-and-args)))
+  (pcase-let* ((line-separator (global-tags--line-separator command))
+               (`(,program . ,program-args)
+                (global-tags--translate-to-command-line command command-flags)))
     (async-start
      `(lambda ()
         (require 'simple)
