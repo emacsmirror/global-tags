@@ -465,7 +465,9 @@ Requires BUFFER to have a file name (path to file exists)."
 When ASYNC is non-nil, call using `async-start'."
   (interactive)
   (if (not async)
-      (global-tags--get-lines-future 'update)
+      (global-tags--get-lines-future 'update
+                                     t ;; ignore result
+                                     )
     ;; else, run async
     (async-start
      `(lambda ()
