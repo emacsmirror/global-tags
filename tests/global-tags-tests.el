@@ -146,18 +146,24 @@ tags.")
 (describe "project.el integration"
   (before-each
     (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)))
+	  (global-gtags--create-temporary-mock-project)
+          project-find-functions '(global-tags-try-project-root)))
   (after-each
-    (delete-directory global-tmp-project-directory t))
-  (it "root, find files"
-    (let ((default-directory global-tmp-project-directory)
-          ;; force the use of only `global-tags-try-project-root' for project root
-          (project-find-functions '(global-tags-try-project-root)))
+    (delete-directory global-tmp-project-directory t)
+    (setq global-tmp-project-directory
+	  (global-gtags--create-temporary-mock-project)
+          project-find-functions (default-value 'project-find-functions)))
+  (it "root"
+    (let ((default-directory global-tmp-project-directory))
       (expect (project-current)
               :not :to-be nil)
       (expect (project-root
                (project-current))
-              :to-equal default-directory)
+              :to-equal default-directory)))
+  (it "find files"
+    (let ((default-directory global-tmp-project-directory))
+      (expect (project-current)
+              :not :to-be nil)
       (expect (project-files
                (project-current))
               :to-equal
@@ -189,12 +195,13 @@ tags.")
 (describe "xref integration"
   (before-each
     (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)))
+	  (global-gtags--create-temporary-mock-project)
+          xref-backend-functions '(global-tags-xref-backend)))
   (after-each
-    (delete-directory global-tmp-project-directory t))
+    (delete-directory global-tmp-project-directory t)
+    (setq xref-backend-functions (default-value 'xref-backend-functions)))
   (it "xref-backend-definitions"
     (let* ((default-directory global-tmp-project-directory)
-           (xref-backend-functions '(global-tags-xref-backend))
            (current-xref-backend (xref-find-backend)))
       (expect
        current-xref-backend :not :to-be nil)
