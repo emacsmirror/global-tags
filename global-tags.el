@@ -444,9 +444,6 @@ Redirects to `global-tags-try-project-root'"
 (cl-defmethod xref-backend-apropos ((_backend global-tags-project) symbol)
   (global-tags--get-xref-locations (substring-no-properties symbol) 'grep))
 
-;;;; TODO
-;;;; cache calls (see `tags-completion-table' @ etags.el)
-
 ;;; update database
 (cl-defun global-tags-update-database-with-buffer (&optional
                                                    (buffer (current-buffer)))
