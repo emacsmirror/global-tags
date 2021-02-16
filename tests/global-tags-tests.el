@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'buttercup)
+(require 'cl-lib)
 (require 'f)
 (require 'global-tags)
 
@@ -105,21 +106,6 @@ tags.")
       (expect (global-tags--get-lines 'completion)
 	      :to-equal completion-tags))))
 
-(describe "tramp"
-  (before-each
-    (setq global-tmp-project-directory
-	  (concat "/ssh:localhost:"
-		  (global-gtags--create-temporary-mock-project))))
-  (after-each
-    (delete-directory global-tmp-project-directory t))
-  (it "root"
-    (expect (file-remote-p global-tmp-project-directory)
-	    :not :to-be nil)
-    (let ((maybe-root (global-tags-try-project-root global-tmp-project-directory)))
-      (expect maybe-root :not :to-be nil)
-      (pcase-let ((`(,tag . ,_dir) maybe-root))
-	(expect tag :to-equal 'global)))))
-
 (describe "usage/API"
   (before-each
     (setq global-tmp-project-directory
@@ -155,6 +141,66 @@ tags.")
 	      :to-be nil)
       (expect (xref-backend-references 'global "this_symbol_does_not_exist")
       	      :to-be nil))))
+
+(describe "project.el integration"
+  (before-each
+    (setq global-tmp-project-directory
+	  (global-gtags--create-temporary-mock-project)))
+  (after-each
+    (delete-directory global-tmp-project-directory t))
+  (it "root, find files"
+    (let ((default-directory global-tmp-project-directory)
+          ;; force the use of only `global-tags-try-project-root' for project root
+          (project-find-functions '(global-tags-try-project-root)))
+      (expect (project-current)
+              :not :to-be nil)
+      (expect (project-root
+               (project-current))
+              :to-equal default-directory)
+      (expect (project-files
+               (project-current))
+              :to-equal
+              (cl-mapcar
+               (lambda (f)
+                 (f-join
+                  global-tmp-project-directory
+                  f))
+               '("main.c" "main.h"))))))
+
+(describe "tramp"
+  ;; use project.el in tramp context
+  (before-each
+    (setq global-tmp-project-directory
+	  (concat "/ssh:localhost:"
+		  (global-gtags--create-temporary-mock-project))))
+  (after-each
+    (delete-directory global-tmp-project-directory t))
+  (it "root"
+    (expect (file-remote-p global-tmp-project-directory)
+	    :not :to-be nil)
+    (let ((default-directory global-tmp-project-directory)
+          ;; force the use of only `global-tags-try-project-root' for project root
+          (project-find-functions '(global-tags-try-project-root)))
+      (expect (project-root
+               (project-current))
+              :to-equal global-tmp-project-directory))))
+
+(describe "xref integration"
+  (before-each
+    (setq global-tmp-project-directory
+	  (global-gtags--create-temporary-mock-project)))
+  (after-each
+    (delete-directory global-tmp-project-directory t))
+  (it "xref-backend-definitions"
+    (let* ((default-directory global-tmp-project-directory)
+           (xref-backend-functions '(global-tags-xref-backend))
+           (current-xref-backend (xref-find-backend)))
+      (expect
+       current-xref-backend :not :to-be nil)
+      (expect
+       (xref-backend-identifier-completion-table current-xref-backend)
+       :to-equal
+       global-tags--all-tags-in-tests))))
 
 (describe "user provided"
   (before-each
