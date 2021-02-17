@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'buttercup)
+(require 'cl-lib)
 (require 'f)
 (require 'global-tags)
 
@@ -61,9 +62,9 @@ tags.")
 		       " ")
 	    :to-equal (format "%s --print-dbpath" global-tags-global-command))
     (expect
-     (global-tags--get-as-string 'print-dbpath) :to-equal nil))
+     (global-tags--get-lines 'print-dbpath) :to-equal nil))
   (it "nil return from invalid command"
-    (expect (global-tags--get-as-string 'file "not-an-existing-file") :to-equal nil))
+    (expect (global-tags--get-lines 'file "not-an-existing-file") :to-equal nil))
   (it "no dbpath"
     (expect (global-tags--get-dbpath "/") :to-equal nil)))
 
@@ -98,32 +99,12 @@ tags.")
   (after-each
     (delete-directory global-tmp-project-directory t))
   (it "global --completion does not respect --print0"
+    ;; we're explicitly testing --completion to make sure it works
+    ;; _regardless_ of not using --print0 underneath
     (let ((default-directory global-tmp-project-directory)
 	  (completion-tags global-tags--all-tags-in-tests))
-      ;; look how we call global with --print0,
-      ;; yet symbols are \n-sepaarated
-      (expect (global-tags--get-as-string 'completion '(print0))
-	      :to-equal
-	      (format "%s\n" (mapconcat 'identity
-				   completion-tags
-				   "\n")))
       (expect (global-tags--get-lines 'completion)
 	      :to-equal completion-tags))))
-
-(describe "tramp"
-  (before-each
-    (setq global-tmp-project-directory
-	  (concat "/ssh:localhost:"
-		  (global-gtags--create-temporary-mock-project))))
-  (after-each
-    (delete-directory global-tmp-project-directory t))
-  (it "root"
-    (expect (file-remote-p global-tmp-project-directory)
-	    :not :to-be nil)
-    (let ((maybe-root (global-tags-try-project-root global-tmp-project-directory)))
-      (expect maybe-root :not :to-be nil)
-      (pcase-let ((`(,tag . ,_dir) maybe-root))
-	(expect tag :to-equal 'global)))))
 
 (describe "usage/API"
   (before-each
@@ -150,7 +131,8 @@ tags.")
   (it "empty return" ;; https://bugs.launchpad.net/global-tags.el/+bug/1850641
     (let ((default-directory global-tmp-project-directory)
           (symbol "this_symbol_does_not_exist")
-	  (kind 'reference))
+          (xref-backend-functions '(global-tags-xref-backend))
+          (kind 'reference))
       (expect (global-tags--get-lines kind
 				      ;; ↓ see `global-tags--get-location'
 				      'result "grep"
@@ -158,8 +140,75 @@ tags.")
 	      :to-be nil)
       (expect (global-tags--get-locations symbol kind)
 	      :to-be nil)
-      (expect (xref-backend-references 'global "this_symbol_does_not_exist")
+      (expect (xref-backend-references (xref-find-backend) "this_symbol_does_not_exist")
       	      :to-be nil))))
+
+(describe "project.el integration"
+  (before-each
+    (setq global-tmp-project-directory
+	  (global-gtags--create-temporary-mock-project)
+          project-find-functions '(global-tags-try-project-root)))
+  (after-each
+    (delete-directory global-tmp-project-directory t)
+    (setq global-tmp-project-directory
+	  (global-gtags--create-temporary-mock-project)
+          project-find-functions (default-value 'project-find-functions)))
+  (it "root"
+    (let ((default-directory global-tmp-project-directory))
+      (expect (project-current)
+              :not :to-be nil)
+      (expect (project-root
+               (project-current))
+              :to-equal default-directory)))
+  (it "find files"
+    (let ((default-directory global-tmp-project-directory))
+      (expect (project-current)
+              :not :to-be nil)
+      (expect (project-files
+               (project-current))
+              :to-equal
+              (cl-mapcar
+               (lambda (f)
+                 (f-join
+                  global-tmp-project-directory
+                  f))
+               '("main.c" "main.h"))))))
+
+(describe "tramp"
+  ;; use project.el in tramp context
+  (before-each
+    (setq global-tmp-project-directory
+	  (concat "/ssh:localhost:"
+		  (global-gtags--create-temporary-mock-project))))
+  (after-each
+    (delete-directory global-tmp-project-directory t))
+  (it "root"
+    (expect (file-remote-p global-tmp-project-directory)
+	    :not :to-be nil)
+    (let ((default-directory global-tmp-project-directory)
+          ;; force the use of only `global-tags-try-project-root' for project root
+          (project-find-functions '(global-tags-try-project-root)))
+      (expect (project-root
+               (project-current))
+              :to-equal global-tmp-project-directory))))
+
+(describe "xref integration"
+  (before-each
+    (setq global-tmp-project-directory
+	  (global-gtags--create-temporary-mock-project)
+          xref-backend-functions '(global-tags-xref-backend)))
+  (after-each
+    (delete-directory global-tmp-project-directory t)
+    (setq xref-backend-functions (default-value 'xref-backend-functions)))
+  (it "xref-backend-definitions"
+    (let* ((default-directory global-tmp-project-directory)
+           (current-xref-backend (xref-find-backend)))
+      (expect
+       current-xref-backend :not :to-be nil)
+      (expect
+       (xref-backend-identifier-completion-table current-xref-backend)
+       :to-equal
+       global-tags--all-tags-in-tests))))
 
 (describe "user provided"
   (before-each
@@ -170,19 +219,24 @@ tags.")
              ".git")
             "tests" "from_tom")))
       (cl-assert (f-exists? user-provided-directory))
-      (setq default-directory
-	    user-provided-directory)))
+      (setq default-directory user-provided-directory
+            xref-backend-functions '(global-tags-xref-backend))))
+  (after-each
+    (setq xref-backend-functions (default-value 'xref-backend-functions)))
   (it "have-xref"
-    (expect (global-tags-xref-backend)
-	    :to-be 'global))
+    (expect (xref-find-backend)
+	    :not :to-be nil))
   (it "special line" ;; this test does not require the user provided directory
     (expect (global-tags--get-location
 	     "parser.lua:348:	local r = lpeg.match(proto * -1 + exception , text , 1, state )
 ")
 	    :not :to-be nil))
   (it "lpeg" ;; https://bugs.launchpad.net/global-tags.el/+bug/1850641
-    (expect (xref-backend-references 'global "lpeg")
+    (expect (xref-backend-references (global-tags-xref-backend) "lpeg")
 	    :not :to-be nil)))
+
+'(describe "xref und project.el integration, but using pre-fetch"
+   (error "WIP"))
 
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."

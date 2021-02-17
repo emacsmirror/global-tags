@@ -4,7 +4,7 @@
 
 ;; Author: Felipe Lema <felipelema@mortemale.org>
 ;; Keywords: convenience, matching, tools
-;; Package-Requires: ((emacs "26.1") (async "1.9.4") (project "0.5.2"))
+;; Package-Requires: ((emacs "26.1") (async "1.9.4") (project "0.5.2") (ht "2.3"))
 ;; URL: https://launchpad.net/global-tags.el
 ;; Version: 0.4
 
@@ -57,6 +57,7 @@
 (require 'async)
 (require 'cl-lib)
 (require 'generator)
+(require 'ht)
 (require 'project)
 (require 'rx)
 (require 'subr-x)
@@ -89,7 +90,6 @@
   :group 'global-tags)
 
 ;;;; utility functions:
-
 (defun global-tags--command-flag (command)
   "Get command line flag for COMMAND as string-or-nil.
 
@@ -143,34 +143,84 @@ FLAGS must be plist like
    (global-tags--command-flag command)
    (global-tags--option-flags flags)))
 
+(defun global-tags--ensured-correct-separator (command flags)
+  "Return FLAGS with correct separator parameter.
+
+'completion is always separated by \\n.  Everything else is separated by \\0."
+  (pcase command
+    (`completion
+     (delete 'print0 flags))
+    (_
+     (append '(print0) flags))))
+
 ;;; Convenience functions (for developers of this package)
+(defun global-tags--line-separator (command)
+  "Get line (candidate) separator chararcter for the command output.
 
-(defun global-tags--get-as-string (command &rest flags)
-  "Execute global COMMAND with FLAGS.
+'completion will _always_ be separated by \\n.  The rest is assumed to be
+separated by \\0.
+"
+  (pcase command
+    (`completion
+     "\n")
+    (_
+     "\0")))
+(defun global-tags--translate-to-command-line (command command-flags)
+  "Translate COMMAND COMMAND-FLAGS to a command line.
 
-FLAGS is a plist.  See `global-tags--get-arguments'.
+Returns a list with (global-binary ARG0 ARG1 …)."
+  (cons
+   global-tags-global-command
+   (global-tags--get-arguments
+    command
+    (global-tags--ensured-correct-separator
+     command
+     command-flags))))
 
-If inner global command returns non-0, then this function returns nil."
-  (let* ((program-and-args (append `(,global-tags-global-command)
-				   (global-tags--get-arguments
-				    command flags)))
-	 (program (car program-and-args))
-	 (program-args (cdr program-and-args))
-	 (command-return-code)
-	 (command-output-str
-	  (with-output-to-string
-	    (setq command-return-code
-		  ;; `call-process', but forwarding program-args
-		  ;; 🙄
-		  (apply (apply-partially
-			  #'process-file
-			  program
-			  nil ;; infile
-			  `(,standard-output nil) ;; dest, ???
-			  nil) ;; display
-			 program-args)))))
-    (if (= command-return-code 0)
-	command-output-str)))
+(defun global-tags--get-lines-future (command ignore-result &rest command-flags)
+  "Return an `async' future that will hold the returned lines of running COMMAND COMMAND-FLAGS.
+
+The future returns (cons return-code list-of-lines)
+
+If you don't want the results, set IGNORE-RESULT to non-nil."
+  (pcase-let* ((line-separator (global-tags--line-separator command))
+               (`(,program . ,program-args)
+                (global-tags--translate-to-command-line command command-flags))
+               (future
+                (async-start
+                 `(lambda ()
+                    (require 'simple)
+                    (let ((tramp-use-ssh-controlmaster-options nil) ;; avoid race conditions
+                          (default-directory ,default-directory)
+	                  (command-return-code))
+                      (let ((command-output-str
+	                     (with-output-to-string
+	                       (setq command-return-code
+		                     ;; `call-process', but forwarding program-args
+		                     ;; 🙄
+		                     (process-file
+		                      ,program
+		                      nil ;; infile
+		                      (list standard-output nil) ;; dest, ???
+		                      nil ;; display
+		                      ,@program-args)))))
+                        (cons
+                         command-return-code
+                         (when command-output-str
+                           (split-string command-output-str ,line-separator t))))))
+                 (when ignore-result
+                   'ignore))))
+    ;; add parameter to future buffers to help debugging
+    ;; see async package for more info
+    (when-let ((actually-process-buffer
+                (process-buffer future)))
+      (with-current-buffer actually-process-buffer
+        (rename-buffer (format "*global future %s %s @ %s*"
+                               command
+                               command-flags
+                               default-directory)
+                       t)))
+    future))
 
 (defun global-tags--get-lines (command &rest flags)
   "Break global COMMAND FLAGS output into lines.
@@ -178,14 +228,16 @@ If inner global command returns non-0, then this function returns nil."
 Adds (print0) to flags.
 
 If COMMAND is completion, no print0 is added (global ignores it underneath)."
-  (pcase-let ((`(,separator . ,command-flags)
-	       (pcase command
-		 (`completion
-		  (cons "\n" (delete 'print0 flags)))
-		 (_
-		  (cons "\0" (append '(print0) flags))))))
-    (when-let* ((output (global-tags--get-as-string command command-flags)))
-      (split-string output separator t))))
+  (pcase-let* ((lines-future (apply #'global-tags--get-lines-future
+                                    (append
+                                     (list
+                                      command
+                                      nil)
+                                     flags)))
+               (`(,command-return-code . ,lines)
+                (async-get lines-future)))
+    (when (= command-return-code 0)
+      lines)))
 
 (defun global-tags--get-location (line)
   "Parse location from LINE.
@@ -217,12 +269,13 @@ Column is always 0."
 (defun global-tags--get-locations (symbol &optional kind)
   "Get locations according to SYMBOL and KIND.
 
-If KIND is omitted, will do \"tag\" search."
-  (let ((lines (global-tags--get-lines kind
-                                       ;; ↓ see `global-tags--get-location'
-                                       'result "grep"
-                                       symbol)))
-    (cl-mapcar #'global-tags--get-location lines)))
+If KIND is omitted, global will do a \"tag\" search."
+  (thread-last
+      (global-tags--get-lines kind
+                              ;; ↓ see `global-tags--get-location'
+                              'result "grep"
+                              symbol)
+    (cl-mapcar #'global-tags--get-location)))
 
 (defun global-tags--get-xref-locations (symbol kind)
   "Get xref locations according to KIND using SYMBOL as query.
@@ -234,7 +287,8 @@ See `global-tags--get-locations'."
 (defun global-tags--get-dbpath (dir)
   "Filepath for database from DIR or nil."
   (when-let* ((maybe-dbpath (let ((default-directory dir))
-                              (global-tags--get-as-string 'print-dbpath)))
+                              (car
+                               (global-tags--get-lines 'print-dbpath))))
               ;; db path is *always* printed with trailing newline
               (trimmed-dbpath (substring maybe-dbpath 0
                                          (- (length maybe-dbpath) 1)))
@@ -245,92 +299,164 @@ See `global-tags--get-locations'."
         dbpath)))
 
 ;;; project.el integration
+;;;; utilities
 (defun global-tags--remote-file-names (local-files)
   "Like `project--remote-file-names', but without having to require Emacs 27."
-  (seq-map
-   (lambda (local-file)
-     (concat
-      (file-remote-p default-directory)
-      local-file))
-   local-files))
+  (let ((remote-prefix
+         (file-remote-p default-directory)))
+    (seq-map
+     (lambda (local-file)
+       (concat
+        remote-prefix
+        local-file))
+     local-files)))
 
+(defclass global-tags-project ()
+  ((root
+    :initarg :root))
+  "Base class for all project.el and xref defmethods.")
+(defclass global-tags-project-with-pre-fetched-lines (global-tags-project)
+  ()
+  "Backend / project type to mark usage of pre-fetched data.")
+
+(defvar global-tags--pre-fetching-futures
+  (make-hash-table :test 'equal)
+  "(project-root . command-and-args) → lines future.
+
+Root is path returned by `global-tags--get-dbpath'.  Lines future is returned by
+`global-tags--get-lines-future'")
+
+(defun global-tags--pre-fetch-key (project command args)
+  "Get a key for `global-tags--pre-fetching-futures'."
+  (cons
+   (project-root project)
+   (append (list command)
+           args)))
+
+(defun global-tags--queue-next (project command args)
+  "Always set next future for arguments."
+  (ht-set
+   global-tags--pre-fetching-futures
+   (global-tags--pre-fetch-key project command args)
+   (let ((default-directory (oref project root)))
+     (apply #'global-tags--get-lines-future
+            (append (list command nil)
+                    args)))))
+
+(cl-defgeneric global-tags--ensure-next-fetch-is-queued (project command args)
+  "Queue next future only on selected (defmethod) parameters.")
+(cl-defmethod global-tags--ensure-next-fetch-is-queued ((project global-tags-project) command args)
+  "Don't queue any «next fetch»")
+
+(defconst global-tags--commands-and-args-that-allow-prefetch
+  '((path absolute)
+    (completion))
+  "Each (list COMMAND ARG0 ARG1 …) that will be pre-fetched and stored in `global-tags--pre-fetching-futures'.")
+
+(cl-defmethod global-tags--ensure-next-fetch-is-queued ((project global-tags-project-with-pre-fetched-lines) command args)
+  (let ((command-and-args
+         (append (list command)
+                 args)))
+    (when (member command-and-args global-tags--commands-and-args-that-allow-prefetch)
+      (global-tags--queue-next project command args))))
+
+(defun global-tags--ensure-queued (project command args)
+  "If key is empty in `global-tags--pre-fetching-futures', call `global-tags--queue-next'."
+  (unless (ht-get global-tags--pre-fetching-futures (global-tags--pre-fetch-key project command args))
+    (global-tags--queue-next project command args)))
+
+
+(defun global-tags--project-get-lines (project command &rest flags)
+  "Get lines for running COMMAND FLAGS.
+
+Forward PROJECT to `global-tags--ensure-next-fetch-is-queued'.
+
+If a future for COMMAND FLAGS was previously queued in
+`global-tags--pre-fetching-futures', it will use that.
+
+Whatever is used, `global-tags--ensure-next-fetch-is-queued' is called to
+(maybe, according to method) ensure the next call for COMMAND FLAGS will be
+pre-fetched."
+  (let* ((this-key
+          (global-tags--pre-fetch-key project command flags))
+         (this-prefetched
+          (ht-get global-tags--pre-fetching-futures
+                  this-key)))
+    ;; set next future before returning
+    (global-tags--ensure-next-fetch-is-queued project command flags)
+    (unless this-prefetched
+      ;; set to an actual future if there wasn't a previous one running in background
+      (setq this-prefetched
+            (let ((default-directory (oref project root)))
+              (apply #'global-tags--get-lines-future
+                     (append (list command nil)
+                             flags)))))
+    ;; return from whatever future we had
+    (pcase-let* ((`(,command-return-code . ,lines)
+                  (async-get this-prefetched)))
+      (when (= command-return-code 0)
+        lines))))
+
+;;;; connect to API
 (defun global-tags-try-project-root (dir)
   "Project root for DIR if it exists."
-  (if-let* ((dbpath (global-tags--get-dbpath dir)))
-      (cons 'global dbpath)))
+  (when-let* ((dbpath (global-tags--get-dbpath dir))
+              (project
+               ;; ↓ default to launch pre-fetches
+               (global-tags-project-with-pre-fetched-lines
+                :root dbpath)))
+    ;; ↓ won't prefetch if `global-tags--ensure-next-fetch-is-queued'
+    ;;   method for project does not says so
+    (cl-loop for command-and-flags in global-tags--commands-and-args-that-allow-prefetch
+             do
+             (pcase-let* ((`(,command ,flags) command-and-flags))
+               (global-tags--ensure-next-fetch-is-queued project command flags)))
+    project))
 
-(cl-defmethod project-root ((project (head global)))
+(cl-defmethod project-root ((project global-tags-project))
   "Default implementation.
 
 See `project-root' for 'transient."
-  (cdr project))
-
-(cl-defmethod project-file-completion-table ((project (head global)) dirs)
-  "See documentation for `project-file-completion-table'."
-  (ignore project)
-  (lambda (string pred action)
-    (cond
-     ((eq action 'metadata)
-      '(metadata . ((category . project-file))))
-     (t
-      (let ((all-files
-             (cl-mapcan
-              (lambda (dir)
-                (let* ((default-directory dir))
-                  (global-tags--get-lines 'path
-                                          ;; ↓ project.el deals w/long names
-                                          'absolute
-                                          pred)))
-              dirs)))
-        (complete-with-action action
-                              (global-tags--remote-file-names all-files)
-                              string
-                              pred))))))
+  (oref project root))
 
 ;; No need to implement unless necessary
 ;;(cl-defmethod project-external-roots ((project (head global)))
 ;;  )
-(cl-defmethod project-files ((project (head global)) &optional dirs)
-  "Based off `vc' backend method."
-  (let ((files-reported
-         (cl-mapcan
-          (lambda (dir)
-            (let* ((default-directory dir))
-              (global-tags--get-lines 'path
-                                      ;; ↓ project.el deals w/long names
-                                      'absolute)))
-          (or dirs (project-roots project)))))
-    (global-tags--remote-file-names
-     files-reported)))
+(cl-defmethod project-files ((project global-tags-project) &optional _dirs)
+  "Based off `vc' backend method.
+
+_DIRS is ignored."
+  (global-tags--remote-file-names
+   (global-tags--project-get-lines project
+                                   'path
+                                   ;; ↓ project.el deals w/long names
+                                   'absolute)))
 
 ;;(cl-defgeneric project-ignores (_project _dir)
 
 ;;; xref.el integration
-
 (defun global-tags-xref-backend ()
-  "Xref backend for using global."
-  (if (global-tags--get-dbpath default-directory)
-      'global))
+  "Xref backend for using global.
 
-(cl-defmethod xref-backend-definitions ((_backend (eql global)) symbol)
+Redirects to `global-tags-try-project-root'"
+  (global-tags-try-project-root default-directory))
+
+(cl-defmethod xref-backend-definitions ((_backend global-tags-project) symbol)
   "See `global-tags--get-locations'."
   (global-tags--get-xref-locations (substring-no-properties symbol) 'tag))
 
-(cl-defmethod xref-backend-identifier-at-point ((_backend (eql global)))
+(cl-defmethod xref-backend-identifier-at-point ((_backend global-tags-project))
   (if-let ((symbol-str (thing-at-point 'symbol)))
       symbol-str))
 
-(cl-defmethod xref-backend-identifier-completion-table ((_backend (eql global)))
-  (global-tags--get-lines 'completion))
+(cl-defmethod xref-backend-identifier-completion-table ((backend global-tags-project))
+  (global-tags--project-get-lines backend 'completion))
 
-(cl-defmethod xref-backend-references ((_backend (eql global)) symbol)
+(cl-defmethod xref-backend-references ((_backend global-tags-project) symbol)
   (global-tags--get-xref-locations (substring-no-properties symbol) 'reference))
 
-(cl-defmethod xref-backend-apropos ((_backend (eql global)) symbol)
+(cl-defmethod xref-backend-apropos ((_backend global-tags-project) symbol)
   (global-tags--get-xref-locations (substring-no-properties symbol) 'grep))
-
-;;;; TODO
-;;;; cache calls (see `tags-completion-table' @ etags.el)
 
 ;;; update database
 (cl-defun global-tags-update-database-with-buffer (&optional
@@ -343,11 +469,12 @@ Requires BUFFER to have a file name (path to file exists)."
       ;; don't update a buffer that doesn't exist
       (error "Cannot update %s (no filename)"
              buffer))
-    (global-tags--get-as-string 'update
-                                `(single-update
-                                  ,(file-local-name
+    (global-tags--get-lines-future 'update
+                                   t ;; ignore result
+                                   'single-update
+                                   (file-local-name
                                     (expand-file-name
-                                     (buffer-file-name)))))))
+                                     (buffer-file-name))))))
 
 ;;; creating database
 (defun global-tags-create-database (directory)
@@ -366,26 +493,12 @@ Requires BUFFER to have a file name (path to file exists)."
   (unless (global-tags--get-dbpath default-directory)
     (call-interactively #'global-tags-create-database)))
 
-(cl-defun global-tags-update-database (&optional
-                                       (async t))
-  "Calls «global --update».
-When ASYNC is non-nil, call using `async-start'."
+(cl-defun global-tags-update-database ()
+  "Calls «global --update» in the background."
   (interactive)
-  (if (not async)
-      (global-tags--get-as-string 'update)
-    ;; else, run async
-    (async-start
-     `(lambda ()
-        (let ((default-directory ,default-directory)
-              (tramp-use-ssh-controlmaster-options nil)) ;; avoid race conditions
-          (process-file
-           ,global-tags-global-command
-           nil
-           nil
-           nil
-           ,@(global-tags--get-arguments
-              'update))))
-     'ignore)))
+  (global-tags--get-lines-future 'update
+                                 t ;; ignore result
+                                 ))
 
 (define-minor-mode global-tags-exclusive-backend-mode
   "Use GNU Global as exclusive backend for several Emacs features."
