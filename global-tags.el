@@ -302,12 +302,14 @@ See `global-tags--get-locations'."
 ;;;; utilities
 (defun global-tags--remote-file-names (local-files)
   "Like `project--remote-file-names', but without having to require Emacs 27."
-  (seq-map
-   (lambda (local-file)
-     (concat
-      (file-remote-p default-directory)
-      local-file))
-   local-files))
+  (let ((remote-prefix
+         (file-remote-p default-directory)))
+    (seq-map
+     (lambda (local-file)
+       (concat
+        remote-prefix
+        local-file))
+     local-files)))
 
 (defclass global-tags-project ()
   ((root
