@@ -493,28 +493,12 @@ Requires BUFFER to have a file name (path to file exists)."
   (unless (global-tags--get-dbpath default-directory)
     (call-interactively #'global-tags-create-database)))
 
-(cl-defun global-tags-update-database (&optional
-                                       (async t))
-  "Calls «global --update».
-When ASYNC is non-nil, call using `async-start'."
+(cl-defun global-tags-update-database ()
+  "Calls «global --update» in the background."
   (interactive)
-  (if (not async)
-      (global-tags--get-lines-future 'update
-                                     t ;; ignore result
-                                     )
-    ;; else, run async
-    (async-start
-     `(lambda ()
-        (let ((default-directory ,default-directory)
-              (tramp-use-ssh-controlmaster-options nil)) ;; avoid race conditions
-          (process-file
-           ,global-tags-global-command
-           nil
-           nil
-           nil
-           ,@(global-tags--get-arguments
-              'update))))
-     'ignore)))
+  (global-tags--get-lines-future 'update
+                                 t ;; ignore result
+                                 ))
 
 (define-minor-mode global-tags-exclusive-backend-mode
   "Use GNU Global as exclusive backend for several Emacs features."
