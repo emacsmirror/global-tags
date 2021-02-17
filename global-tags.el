@@ -185,30 +185,42 @@ The future returns (cons return-code list-of-lines)
 If you don't want the results, set IGNORE-RESULT to non-nil."
   (pcase-let* ((line-separator (global-tags--line-separator command))
                (`(,program . ,program-args)
-                (global-tags--translate-to-command-line command command-flags)))
-    (async-start
-     `(lambda ()
-        (require 'simple)
-        (let ((tramp-use-ssh-controlmaster-options nil) ;; avoid race conditions
-              (default-directory ,default-directory)
-	      (command-return-code))
-          (let ((command-output-str
-	         (with-output-to-string
-	           (setq command-return-code
-		         ;; `call-process', but forwarding program-args
-		         ;; 🙄
-		         (process-file
-		          ,program
-		          nil ;; infile
-		          (list standard-output nil) ;; dest, ???
-		          nil ;; display
-		          ,@program-args)))))
-            (cons
-             command-return-code
-             (when command-output-str
-               (split-string command-output-str ,line-separator t))))))
-     (when ignore-result
-       'ignore))))
+                (global-tags--translate-to-command-line command command-flags))
+               (future
+                (async-start
+                 `(lambda ()
+                    (require 'simple)
+                    (let ((tramp-use-ssh-controlmaster-options nil) ;; avoid race conditions
+                          (default-directory ,default-directory)
+	                  (command-return-code))
+                      (let ((command-output-str
+	                     (with-output-to-string
+	                       (setq command-return-code
+		                     ;; `call-process', but forwarding program-args
+		                     ;; 🙄
+		                     (process-file
+		                      ,program
+		                      nil ;; infile
+		                      (list standard-output nil) ;; dest, ???
+		                      nil ;; display
+		                      ,@program-args)))))
+                        (cons
+                         command-return-code
+                         (when command-output-str
+                           (split-string command-output-str ,line-separator t))))))
+                 (when ignore-result
+                   'ignore))))
+    ;; add parameter to future buffers to help debugging
+    ;; see async package for more info
+    (when-let ((actually-process-buffer
+                (process-buffer future)))
+      (with-current-buffer actually-process-buffer
+        (rename-buffer (format "*global future %s %s @ %s*"
+                               command
+                               command-flags
+                               default-directory)
+                       t)))
+    future))
 
 (defun global-tags--get-lines (command &rest flags)
   "Break global COMMAND FLAGS output into lines.
