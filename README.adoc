@@ -9,6 +9,7 @@
 
 * Integrate to main Emacs branch
 * Do *not* expose `global` to the final user with commands: user should use `project.el` and `xref.el` functions
+* Improve response times of queries in remote or big codebase by pre-fetching results in the background.
 
 === Usage
 

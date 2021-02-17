@@ -6,7 +6,7 @@
 ;; Keywords: convenience, matching, tools
 ;; Package-Requires: ((emacs "26.1") (async "1.9.4") (project "0.5.2") (ht "2.3"))
 ;; URL: https://launchpad.net/global-tags.el
-;; Version: 0.4
+;; Version: 0.5
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU Lesser General Public License as published by
@@ -47,6 +47,11 @@
 ;;                                      #'global-tags-update-database-with-buffer
 ;;                                      nil
 ;;                                      t)))
+;;
+;; By default, the global-tags backend will pre-fetch expensive calls (list
+;; files, get all symbols) to keep a snappy flow.  It is assumed that files
+;; or symbols being looked up don't change much within an Emacs session.
+
 
 ;;; Code:
 
