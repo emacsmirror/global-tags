@@ -55,6 +55,38 @@
 
 ;;; Code:
 
+(defun ggtags-find-tag-dwim (name &optional what)
+  "Find NAME by context.
+If point is at a definition tag, find references, and vice versa.
+If point is at a line that matches `ggtags-include-pattern', find
+the include file instead.
+
+When called interactively with a prefix arg, always find
+definition tags."
+  (interactive
+   (let ((include (and (not current-prefix-arg) (ggtags-include-file))))
+     (ggtags-ensure-project)
+     (if include (list include 'include)
+       (list (ggtags-read-tag 'definition current-prefix-arg)
+             (and current-prefix-arg 'definition)))))
+  (ggtags-check-project)    ; For `ggtags-current-project-root' below.
+  (cond
+   ((eq what 'include)
+    (ggtags-find-file name))
+   ((or (eq what 'definition)
+        (not buffer-file-name)
+        (not (ggtags-project-has-refs (ggtags-find-project)))
+        (not (ggtags-project-file-p buffer-file-name)))
+    (ggtags-find-definition name))
+   (t (ggtags-find-tag
+       (format "--from-here=%d:%s"
+               (line-number-at-pos)
+               ;; Note `ggtags-find-tag' binds `default-directory' to
+               ;; project root.
+               (shell-quote-argument
+                (ggtags-project-relative-file buffer-file-name)))
+       "--" (shell-quote-argument name)))))
+
 ;;; Static definitions
 (defgroup global-tags nil "GNU global integration"
   :group 'tools)

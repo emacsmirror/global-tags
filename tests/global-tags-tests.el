@@ -235,22 +235,55 @@ tags.")
     (expect (xref-backend-references (global-tags-xref-backend) "lpeg")
 	    :not :to-be nil)))
 
-'(describe "xref und project.el integration, but using pre-fetch"
-   (error "WIP"))
+(describe "xref searches for either symbol or include file"
+  (before-each
+    (setq global-tmp-project-directory
+          (global-gtags--create-temporary-mock-project)
+          xref-backend-functions '(global-tags-xref-backend)))
+  (after-each
+    (delete-directory global-tmp-project-directory t)
+    (setq xref-backend-functions (default-value 'xref-backend-functions)))
+  (it "search at point on include"
+    (save-window-excursion
+      (let ((main.c-buffer
+             (find-file (f-join global-tmp-project-directory "main.c"))))
+        (with-current-buffer main.c-buffer
+          (widen)
+          (goto-char (point-min))
+          (search-forward-regexp (rx "main.h"))
+          ;; ensure we're standing in the middle of ⎡main.h⎦
+          (goto-char (- (point) 2))
+          (expect (thing-at-point 'filename)
+                  :to-equal "main.h")
+          ;; correctly captures header file as an xref identifier
+          (expect
+           (substring-no-properties
+            (xref-backend-identifier-at-point
+             (xref-find-backend)))
+           :to-equal "main.h")
+          ;; gets the file as definition
+          (expect (xref-backend-definitions
+                   (xref-find-backend)
+                   (xref-backend-identifier-at-point
+                    (xref-find-backend)))
+                  :to-equal
+                  '("main.h")))))
+    )
+  )
 
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
   (let* ((default-directory (file-name-as-directory project-path))
-	 (main-file-path (f-join default-directory "main.c"))
-	 (main-header-path (f-join default-directory "main.h"))
-	 (main-header-text "char *header_string;
+         (main-file-path (f-join default-directory "main.c"))
+         (main-header-path (f-join default-directory "main.h"))
+         (main-header-text "char *header_string;
 int header_int;
 float header_float;
 void global_fun();
 void another_global_fun();
 void called_fun();
 ")
-	 (main-file-text  "
+         (main-file-text  "
 #include \"main.h\"
 
 char *global_string;
