@@ -40,6 +40,10 @@ Alternatively, you can manually configure project.el and xref.el, add their
                                      t)))
 ----
 
+=== Reporting bugs
+
+https://bugs.launchpad.net/global-tags.el
+
 === Submiting patches / pull requests
 
 See https://help.launchpad.net/Code/Review/#Proposing_a_merge and https://answers.launchpad.net/launchpad/+question/267929 as stated https://bugs.launchpad.net/global-tags.el/+bug/1844961[here]
