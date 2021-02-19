@@ -366,6 +366,11 @@ See `global-tags--get-locations'."
         remote-prefix
         local-file))
      local-files)))
+;;;;; backend classes
+;; these classes changed the way xref and project.el functions behave
+;; Using classes make features in this package extendable
+;; For example, one could cache selected calls by inheriting from one of this classes
+;; and only implementing the selected methods… the rest stay as-is
 
 (defclass global-tags-project ()
   ((root
@@ -374,6 +379,13 @@ See `global-tags--get-locations'."
 (defclass global-tags-project-with-pre-fetched-lines (global-tags-project)
   ()
   "Backend / project type to mark usage of pre-fetched data.")
+(defclass global-tags-project-may-lookup-includes (global-tags-project)
+  ()
+  "Backend / project type to mark searching for either symbol or include file in xref.")
+
+(defclass global-tags-project-default-options (global-tags-project-may-lookup-includes global-tags-project-with-pre-fetched-lines)
+  ()
+  "Inherit classes for default backend behaviour.")
 
 (defvar global-tags--pre-fetching-futures
   (make-hash-table :test 'equal)
@@ -458,8 +470,7 @@ pre-fetched."
   "Project root for DIR if it exists."
   (when-let* ((dbpath (global-tags--get-dbpath dir))
               (project
-               ;; ↓ default to launch pre-fetches
-               (global-tags-project-with-pre-fetched-lines
+               (global-tags-project-default-options
                 :root dbpath)))
     ;; ↓ won't prefetch if `global-tags--ensure-next-fetch-is-queued'
     ;;   method for project does not says so
@@ -510,9 +521,31 @@ Redirects to `global-tags-try-project-root'"
   "See `global-tags--get-locations'."
   (global-tags--get-xref-locations (substring-no-properties symbol) 'tag))
 
+(cl-defmethod xref-backend-definitions ((backend global-tags-project-may-lookup-includes) symbol)
+  (if (eq (get-text-property 0 'face symbol)
+          ;; see `xref-backend-identifier-at-point' method for this class
+          'global-tags-include-file)
+      ;; search by include
+      (project-find-file-in symbol ;; include
+                            (list (project-root backend)) ;; roots
+                            backend) ;; project
+    ;; default search
+    (cl-call-next-method)))
+
 (cl-defmethod xref-backend-identifier-at-point ((_backend global-tags-project))
-  (if-let ((symbol-str (thing-at-point 'symbol)))
-      symbol-str))
+  (thing-at-point 'symbol))
+
+(cl-defmethod xref-backend-identifier-at-point ((_backend global-tags-project-may-lookup-includes))
+  (if-let* ((include-under-point (global-tags--include-under-point)))
+      (progn
+        ;; mark as special string to be picked up by `xref-backend-definitions'
+        (add-face-text-property 0 1
+                                'global-tags-include-file
+                                t
+                                include-under-point)
+        include-under-point)
+    ;; else, use next default behaviour
+    (cl-call-next-method)))
 
 (cl-defmethod xref-backend-identifier-completion-table ((backend global-tags-project))
   (global-tags--project-get-lines backend 'completion))
