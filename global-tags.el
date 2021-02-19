@@ -126,6 +126,25 @@ definition tags."
   :type '(repeat string)
   :group 'global-tags)
 
+(defcustom global-tags-include-pattern
+  (rx
+   line-start
+   (* (any space))
+   "#" (* (any space))
+   (or "include" "import")
+   (* (any space))
+   (or "\"" "<")
+   (? (* "./"))
+   (group (? (* any)))
+   (or "\"" ">"))
+  "Pattern used to detect include files.
+
+The 10-th group is used to match the include file name.
+
+Taken from `ggtags-include-pattern'."
+  :type '(repeat string)
+  :group 'global-tags)
+
 ;;;; utility functions:
 (defun global-tags--command-flag (command)
   "Get command line flag for COMMAND as string-or-nil.
@@ -472,6 +491,15 @@ _DIRS is ignored."
 ;;(cl-defgeneric project-ignores (_project _dir)
 
 ;;; xref.el integration
+;;;; utilities
+(defun global-tags--include-under-point ()
+  "String for include file under point."
+  (save-excursion
+    (beginning-of-line)
+    (and (looking-at global-tags-include-pattern)
+         (match-string 1))))
+
+;;;; API
 (defun global-tags-xref-backend ()
   "Xref backend for using global.
 
