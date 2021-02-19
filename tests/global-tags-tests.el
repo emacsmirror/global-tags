@@ -214,7 +214,7 @@ tags.")
   (before-each
     (let ((user-provided-directory
            (f-join
-	    (locate-dominating-file
+            (locate-dominating-file
              (symbol-file 'global-gtags--create-temporary-mock-project)
              ".git")
             "tests" "from_tom")))
@@ -225,24 +225,41 @@ tags.")
     (setq xref-backend-functions (default-value 'xref-backend-functions)))
   (it "have-xref"
     (expect (xref-find-backend)
-	    :not :to-be nil))
+            :not :to-be nil))
   (it "special line" ;; this test does not require the user provided directory
     (expect (global-tags--get-location
-	     "parser.lua:348:	local r = lpeg.match(proto * -1 + exception , text , 1, state )
+             "parser.lua:348:	local r = lpeg.match(proto * -1 + exception , text , 1, state )
 ")
-	    :not :to-be nil))
+            :not :to-be nil))
   (it "lpeg" ;; https://bugs.launchpad.net/global-tags.el/+bug/1850641
     (expect (xref-backend-references (global-tags-xref-backend) "lpeg")
-	    :not :to-be nil)))
+            :not :to-be nil)))
+
+(defun my/project-dont-prompt-user-get-matching (prompt
+                                                 all-files &optional predicate
+                                                 hist default)
+  (let ((found-files
+         (seq-find
+          (lambda (full-path)
+            (string-equal
+             (file-name-nondirectory full-path)
+             default))
+          all-files)))
+    ;; we're not supposed to be handling more than one file
+    (cl-assert found-files)
+    found-files))
 
 (describe "xref searches for either symbol or include file"
   (before-each
     (setq global-tmp-project-directory
           (global-gtags--create-temporary-mock-project)
-          xref-backend-functions '(global-tags-xref-backend)))
+          xref-backend-functions '(global-tags-xref-backend)
+          ;; force project.el to return matching "default" from "all-files" without prompting anyone
+          project-read-file-name-function #'my/project-dont-prompt-user-get-matching))
   (after-each
     (delete-directory global-tmp-project-directory t)
-    (setq xref-backend-functions (default-value 'xref-backend-functions)))
+    (setq xref-backend-functions (default-value 'xref-backend-functions)
+          project-read-file-name-function (default-value 'project-read-file-name-function)))
   (it "search at point on include"
     (save-window-excursion
       (let ((main.c-buffer
@@ -262,14 +279,16 @@ tags.")
              (xref-find-backend)))
            :to-equal "main.h")
           ;; gets the file as definition
-          (expect (xref-backend-definitions
-                   (xref-find-backend)
-                   (xref-backend-identifier-at-point
-                    (xref-find-backend)))
-                  :to-equal
-                  '("main.h")))))
-    )
-  )
+          (expect
+           (let* ((identifier (xref-backend-identifier-at-point (xref-find-backend)))
+                  (search-result ;; search using project.el opens the file and returns the buffer
+                   (xref-backend-definitions (xref-find-backend)
+                                             identifier))
+                  (file-path-of-result
+                   (buffer-file-name search-result)))
+             file-path-of-result)
+           :to-equal
+           (f-join global-tmp-project-directory "main.h")))))))
 
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH."
