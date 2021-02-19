@@ -133,29 +133,29 @@ Flags are not contracted.  Returned as list to compose command."
 Will recurse on lists."
   (if (not (null flags))
       (let ((head-flag (car flags))
-	    (rest-flags (cdr flags)))
-	(pcase head-flag
-	  ((pred listp)
-	   ;; received a list of list
-	   ;; if you know elisp and know how to handle ⎡&rest⎦, then you can
-	   ;; help remove this section
-	   (let ((l head-flag))
-	     (cl-assert (= 1 (length flags)))
-	     (append (global-tags--option-flags l))))
-	  ((pred null)
-	   (global-tags--option-flags rest-flags))
-	  ('nearness
-	   (let ((next-flag (cadr flags))
-		 (rest-flags (cddr flags))) ;; diferent "rest"
-	     (append
-	      `(,(format "--nearness=%s" next-flag))
-	      (global-tags--option-flags rest-flags))))
-	  ((pred symbolp)
-	   (append `(,(format "--%s" (symbol-name head-flag)))
-		   (global-tags--option-flags rest-flags)))
-	  ((pred stringp)
-	   (append `(,head-flag)
-		   (global-tags--option-flags rest-flags)))))))
+            (rest-flags (cdr flags)))
+        (pcase head-flag
+          ((pred listp)
+           ;; received a list of list
+           ;; if you know elisp and know how to handle ⎡&rest⎦, then you can
+           ;; help remove this section
+           (let ((l head-flag))
+             (cl-assert (= 1 (length flags)))
+             (append (global-tags--option-flags l))))
+          ((pred null)
+           (global-tags--option-flags rest-flags))
+          ('nearness
+           (let ((next-flag (cadr flags))
+                 (rest-flags (cddr flags))) ;; diferent "rest"
+             (append
+              `(,(format "--nearness=%s" next-flag))
+              (global-tags--option-flags rest-flags))))
+          ((pred symbolp)
+           (append `(,(format "--%s" (symbol-name head-flag)))
+                   (global-tags--option-flags rest-flags)))
+          ((pred stringp)
+           (append `(,head-flag)
+                   (global-tags--option-flags rest-flags)))))))
 
 
 
@@ -217,18 +217,18 @@ If you don't want the results, set IGNORE-RESULT to non-nil."
                     (require 'simple)
                     (let ((tramp-use-ssh-controlmaster-options nil) ;; avoid race conditions
                           (default-directory ,default-directory)
-	                  (command-return-code))
+                          (command-return-code))
                       (let ((command-output-str
-	                     (with-output-to-string
-	                       (setq command-return-code
-		                     ;; `call-process', but forwarding program-args
-		                     ;; 🙄
-		                     (process-file
-		                      ,program
-		                      nil ;; infile
-		                      (list standard-output nil) ;; dest, ???
-		                      nil ;; display
-		                      ,@program-args)))))
+                             (with-output-to-string
+                               (setq command-return-code
+                                     ;; `call-process', but forwarding program-args
+                                     ;; 🙄
+                                     (process-file
+                                      ,program
+                                      nil ;; infile
+                                      (list standard-output nil) ;; dest, ???
+                                      nil ;; display
+                                      ,@program-args)))))
                         (cons
                          command-return-code
                          (when command-output-str
@@ -271,25 +271,25 @@ Assumes (:result \"grep\").
 Column is always 0."
   (save-match-data
     (when (string-match (rx line-start
-			    (group (+ (any print))) ;; file
-			    ?: ;; separator
-			    (group (+ (any digit))) ;; line
-			    ?: ;; separator
-			    (group (* (any print blank))) ;; function or line with code
-			    line-end)
-			line)
+                            (group (+ (any print))) ;; file
+                            ?: ;; separator
+                            (group (+ (any digit))) ;; line
+                            ?: ;; separator
+                            (group (* (any print blank))) ;; function or line with code
+                            line-end)
+                        line)
       `((file . ,(match-string 1 line))
-	(line . ,(string-to-number (match-string 2 line)))
-	(description . ,(match-string 3 line))
-	(column . 0)))))
+        (line . ,(string-to-number (match-string 2 line)))
+        (description . ,(match-string 3 line))
+        (column . 0)))))
 
 (defun global-tags--as-xref-location (location-description)
   "Map LOCATION-DESCRIPTION from `global-tags--get-locations' to xref's repr."
   (let-alist location-description
     (xref-make .description
-	       (xref-make-file-location .file
-					.line
-					.column))))
+               (xref-make-file-location .file
+                                        .line
+                                        .column))))
 
 (defun global-tags--get-locations (symbol &optional kind)
   "Get locations according to SYMBOL and KIND.

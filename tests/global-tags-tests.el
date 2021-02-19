@@ -57,10 +57,10 @@ tags.")
 
   (it "arguments make sense"
     (expect (mapconcat #'shell-quote-argument
-		       (append `(,global-tags-global-command)
-			       (global-tags--get-arguments 'print-dbpath))
-		       " ")
-	    :to-equal (format "%s --print-dbpath" global-tags-global-command))
+                       (append `(,global-tags-global-command)
+                               (global-tags--get-arguments 'print-dbpath))
+                       " ")
+            :to-equal (format "%s --print-dbpath" global-tags-global-command))
     (expect
      (global-tags--get-lines 'print-dbpath) :to-equal nil))
   (it "nil return from invalid command"
@@ -76,56 +76,56 @@ tags.")
       (expect .line :to-equal 423)))
   (it "line with empty description (string size 0)"
     (expect (global-tags--get-location "some_file.cpp:50:")
-	    :not :to-be nil)))
+            :not :to-be nil)))
 
 (describe "reading output"
   (before-each
     (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)))
+          (global-gtags--create-temporary-mock-project)))
   (after-each
     (delete-directory global-tmp-project-directory t))
   (it "read files"
     (let ((default-directory global-tmp-project-directory))
       (expect (global-tags--get-lines 'path)
-	      :to-equal '("main.c" "main.h"))))
+              :to-equal '("main.c" "main.h"))))
   (it "dbpath read correctly"
     (expect (global-tags--get-dbpath global-tmp-project-directory)
-	    :to-equal global-tmp-project-directory)))
+            :to-equal global-tmp-project-directory)))
 
 (describe "quirks"
   (before-each
     (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)))
+          (global-gtags--create-temporary-mock-project)))
   (after-each
     (delete-directory global-tmp-project-directory t))
   (it "global --completion does not respect --print0"
     ;; we're explicitly testing --completion to make sure it works
     ;; _regardless_ of not using --print0 underneath
     (let ((default-directory global-tmp-project-directory)
-	  (completion-tags global-tags--all-tags-in-tests))
+          (completion-tags global-tags--all-tags-in-tests))
       (expect (global-tags--get-lines 'completion)
-	      :to-equal completion-tags))))
+              :to-equal completion-tags))))
 
 (describe "usage/API"
   (before-each
     (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)))
+          (global-gtags--create-temporary-mock-project)))
   (after-each
     (delete-directory global-tmp-project-directory t))
   (it "reference"
     (let ((default-directory global-tmp-project-directory))
       (expect (global-tags--get-xref-locations "called_fun" 'reference)
-	      :not :to-be nil)))
+              :not :to-be nil)))
   (it "update-db-single-file"
     (let ((default-directory global-tmp-project-directory))
       (expect (global-tags-update-database-with-buffer
                (find-file (f-join default-directory "main.c")))
-	      :not :to-throw))))
+              :not :to-throw))))
 
 (describe "border case"
   (before-each
     (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)))
+          (global-gtags--create-temporary-mock-project)))
   (after-each
     (delete-directory global-tmp-project-directory t))
   (it "empty return" ;; https://bugs.launchpad.net/global-tags.el/+bug/1850641
@@ -134,24 +134,24 @@ tags.")
           (xref-backend-functions '(global-tags-xref-backend))
           (kind 'reference))
       (expect (global-tags--get-lines kind
-				      ;; ↓ see `global-tags--get-location'
-				      'result "grep"
-				      symbol)
-	      :to-be nil)
+                                      ;; ↓ see `global-tags--get-location'
+                                      'result "grep"
+                                      symbol)
+              :to-be nil)
       (expect (global-tags--get-locations symbol kind)
-	      :to-be nil)
+              :to-be nil)
       (expect (xref-backend-references (xref-find-backend) "this_symbol_does_not_exist")
-      	      :to-be nil))))
+              :to-be nil))))
 
 (describe "project.el integration"
   (before-each
     (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)
+          (global-gtags--create-temporary-mock-project)
           project-find-functions '(global-tags-try-project-root)))
   (after-each
     (delete-directory global-tmp-project-directory t)
     (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)
+          (global-gtags--create-temporary-mock-project)
           project-find-functions (default-value 'project-find-functions)))
   (it "root"
     (let ((default-directory global-tmp-project-directory))
@@ -178,13 +178,13 @@ tags.")
   ;; use project.el in tramp context
   (before-each
     (setq global-tmp-project-directory
-	  (concat "/ssh:localhost:"
-		  (global-gtags--create-temporary-mock-project))))
+          (concat "/ssh:localhost:"
+                  (global-gtags--create-temporary-mock-project))))
   (after-each
     (delete-directory global-tmp-project-directory t))
   (it "root"
     (expect (file-remote-p global-tmp-project-directory)
-	    :not :to-be nil)
+            :not :to-be nil)
     (let ((default-directory global-tmp-project-directory)
           ;; force the use of only `global-tags-try-project-root' for project root
           (project-find-functions '(global-tags-try-project-root)))
@@ -195,7 +195,7 @@ tags.")
 (describe "xref integration"
   (before-each
     (setq global-tmp-project-directory
-	  (global-gtags--create-temporary-mock-project)
+          (global-gtags--create-temporary-mock-project)
           xref-backend-functions '(global-tags-xref-backend)))
   (after-each
     (delete-directory global-tmp-project-directory t)
@@ -323,7 +323,7 @@ int main{
     called_fun();
     called_fun();
 }")
-	 )
+         )
     (f-write-text main-file-text 'utf-8 main-file-path)
     (f-write-text main-header-text 'utf-8 main-header-path)
     (global-tags-create-database default-directory)))
@@ -333,8 +333,8 @@ int main{
 (defun global-gtags--create-temporary-mock-project ()
   "Create temporary mock project and return its path."
   (let ((global-tmp-project-directory (make-temp-file
-				       "global-unit-test-mock-project"
-				       t)))
+                                       "global-unit-test-mock-project"
+                                       t)))
     (global-tags--create-mock-project global-tmp-project-directory)
     global-tmp-project-directory))
 
