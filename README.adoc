@@ -47,6 +47,18 @@ Alternatively, you can manually configure project.el and xref.el, add their
                                      t)))
 ----
 
+=== Reporting bugs
+
+https://bugs.launchpad.net/global-tags.el
+
+=== Submiting patches / pull requests
+
+See https://help.launchpad.net/Code/Review/#Proposing_a_merge and https://answers.launchpad.net/launchpad/+question/267929 as stated https://bugs.launchpad.net/global-tags.el/+bug/1844961[here]
+
+=== Code of Conduct
+
+Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms.
+
 === Related projects
 
 * https://www.gnu.org/s/global/[GNU global]: source code tag system
