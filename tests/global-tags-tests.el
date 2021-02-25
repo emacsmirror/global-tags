@@ -77,6 +77,11 @@ tags.")
   (it "line with empty description (string size 0)"
     (expect (global-tags--get-location "some_file.cpp:50:")
             :not :to-be nil)))
+(defvar global-tmp-project-directory
+  nil
+  "Temporary project directory for running a single test.
+
+See `global-gtags--create-temporary-mock-project'")
 
 (describe "reading output"
   (before-each
@@ -332,11 +337,11 @@ int main{
 
 (defun global-gtags--create-temporary-mock-project ()
   "Create temporary mock project and return its path."
-  (let ((global-tmp-project-directory (make-temp-file
-                                       "global-unit-test-mock-project"
-                                       t)))
-    (global-tags--create-mock-project global-tmp-project-directory)
-    global-tmp-project-directory))
+  (let ((this-global-tmp-project-directory (make-temp-file
+                                            "global-unit-test-mock-project"
+                                            t)))
+    (global-tags--create-mock-project this-global-tmp-project-directory)
+    this-global-tmp-project-directory))
 
 
 

@@ -118,6 +118,15 @@ Taken from `ggtags-include-pattern'."
   :type '(repeat string)
   :group 'global-tags)
 
+(defcustom global-tags-search-dbpath-in-background
+  t
+
+  "Search for dbpath in background when opening files.
+
+Helps preventing tramp halting because of IO."
+  :type 'bool
+  :group 'global-tags)
+
 ;;;; utility functions:
 (defun global-tags--command-flag (command)
   "Get command line flag for COMMAND as string-or-nil.
@@ -313,11 +322,52 @@ See `global-tags--get-locations'."
   (cl-mapcar #'global-tags--as-xref-location
              (global-tags--get-locations symbol kind)))
 
-(defun global-tags--get-dbpath (dir)
-  "Filepath for database from DIR or nil."
-  (when-let* ((maybe-dbpath (let ((default-directory dir))
-                              (car
-                               (global-tags--get-lines 'print-dbpath))))
+(defvar-local global-tags--dbpath-future
+  nil
+  "Holds future for root according to global.
+
+This is to prevent tramp from halting GUI, as it pre-fetches the root in the background.
+
+Value can be nil (not yet set) or an async future.")
+(cl-defun global-tags--ensure-dbpath-future (&optional discard-any-previous)
+  "Ensure that `global-tags--dbpath-future' is set in buffer.
+
+When DISCARD-ANY-PREVIOUS, will set the next regardless.
+
+Note: uses `default-directory' as «this» in «look for tags in this dir»."
+  (when discard-any-previous
+    (when-let* ((future global-tags--dbpath-future)
+                (future-buffer (process-buffer future)))
+      (kill-buffer future-buffer)) ;; also destroys the process, right?
+    (setq-local global-tags--dbpath-future nil))
+  (unless global-tags--dbpath-future
+    ;; else, set
+    (setq-local global-tags--dbpath-future
+                (global-tags--get-lines-future 'print-dbpath
+                                               nil))))
+
+
+(cl-defun global-tags--get-dbpath (&optional (dir default-directory))
+  "Filepath for database from DIR."
+  (when-let* ((maybe-dbpath
+               (let ((default-directory dir))
+                 (if (and global-tags-search-dbpath-in-background
+                          global-tags--dbpath-future)
+                     ;; try to fetch from future
+                     (let* ((dbpath (async-get global-tags--dbpath-future)))
+                       ;; ensure next
+                       (global-tags--ensure-dbpath-future 'discard)
+                       (when (and
+                              (stringp dbpath))
+                         (if (string-prefix-p dbpath dir)
+                             dbpath
+                           ;; found a dbpath, but has nothing to do with dir
+                           ;; search manually, but don't use pre-fetched
+                           (car
+                            (global-tags--get-lines 'print-dbpath)))))
+                   ;; else, fetch manually
+                   (car
+                    (global-tags--get-lines 'print-dbpath)))))
               ;; db path is *always* printed with trailing newline
               (trimmed-dbpath (substring maybe-dbpath 0
                                          (- (length maybe-dbpath) 1)))
@@ -339,6 +389,8 @@ See `global-tags--get-locations'."
         remote-prefix
         local-file))
      local-files)))
+
+
 ;;;;; backend classes
 ;; these classes changed the way xref and project.el functions behave
 ;; Using classes make features in this package extendable
@@ -548,20 +600,72 @@ Requires BUFFER to have a file name (path to file exists)."
                                      (buffer-file-name))))))
 
 ;;; creating database
-(defun global-tags-create-database (directory)
-  "Create tags database at DIRECTORY."
-  (interactive "DCreate database at: ")
-  (let ((default-directory directory))
-    (apply 'process-file
-           (append
+(cl-defun global-tags--async-create-database (directory then)
+  "Lanuches command to create db at directory, call THEN with returned code.
+
+THEN is passed as finish-func to `async-start'
+
+Returns async future."
+  (async-start
+   `(lambda ()
+      (let ((default-directory ,directory)
+            (tramp-use-ssh-controlmaster-options nil)) ;; avoid race conditions
+        (process-file
+         ,@(append
             (list
              global-tags-generate-tags-command
              nil nil nil)
             global-tags-generate-tags-flags))))
+   then))
+
+(defun global-tags-create-database (directory)
+  "Create database at DIRECTORY.
+
+Calls `global-tags--async-create-database' underneath"
+  (let ((command-return-code
+         (async-get
+          (global-tags--async-create-database
+           directory
+           nil ;; special value so we can do `async-get'
+           ))))
+    (when (not (= command-return-code 0))
+      (error "Could not create database at %s, global returned %d"
+             directory
+             command-return-code)))
+  directory)
+
+(defun global-tags-create-database-in-background (directory)
+  "Create tags database at DIRECTORY.
+
+Returns immediately.  The database is created in the background.
+
+Any opened buffers under this directory will point to the newly created db."
+  (interactive "DCreate database at: ")
+  (let ((reporter
+         (make-progress-reporter
+          (format "Generating global tags database at %s …")
+          0 1)))
+    (global-tags--async-create-database
+     directory
+     (lambda (command-return-code)
+       (progress-reporter-done reporter)
+       (if (not (= command-return-code 0))
+           (error "%s returned %d when generating tags"
+                  global-tags-generate-tags-command
+                  command-return-code)
+         (when global-tags-search-dbpath-in-background
+           ;; invalidate any futures under this directory
+           (cl-loop for buffer being the buffers
+                    do (with-current-buffer buffer
+                         (when
+                             (and buffer-file-name
+                                  (string-prefix-p directory buffer-file-name)
+                                  global-tags--dbpath-future)
+                           (global-tags--ensure-dbpath-future 'discard-any-previous))))))))))
 
 (defun global-tags-ensure-database ()
   "Calls `global-tags-create-database' if one db does not exist."
-  (unless (global-tags--get-dbpath default-directory)
+  (unless (global-tags--get-dbpath)
     (call-interactively #'global-tags-create-database)))
 
 (cl-defun global-tags-update-database ()
