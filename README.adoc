@@ -10,13 +10,14 @@
 * Integrate to main Emacs branch
 * Do *not* expose `global` to the final user with commands: user should use `project.el` and `xref.el` functions
 * Improve response times of queries in remote or big codebase by pre-fetching results in the background.
+* Prevent Emacs from freezing when calling global. While `global` is meant to respond real quickly, calling it using Tramp can freeze Emacs for a few seconds.
 
 === Features
 
 * Navigate files using project.el
 * Search for tags using xref
 * Do-what-I-mean: search either a symbol under cursor or header file under cursor (inside a `#include`)
-* Pre-fetch heavy queries (list files, list tags) for a snappier experience.
+* Pre-fetch results (list files, list tags, database location) for a snappier experience.
 
 === Usage
 
