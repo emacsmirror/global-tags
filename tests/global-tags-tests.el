@@ -77,6 +77,7 @@ tags.")
   (it "line with empty description (string size 0)"
     (expect (global-tags--get-location "some_file.cpp:50:")
             :not :to-be nil)))
+
 (defvar global-tmp-project-directory
   nil
   "Temporary project directory for running a single test.
@@ -313,10 +314,8 @@ See `global-gtags--create-temporary-mock-project'")
             (global-tags-create-database-in-background
              default-directory)))
       (while (not (async-ready db-future))
-        (accept-process-output
-         ;;db-future
-         ))
-      (expect (project-root)
+        (accept-process-output db-future))
+      (expect (global-tags--get-dbpath default-directory)
               :not :to-be nil))))
 
 (defun global-tags--create-mock-project (project-path)
