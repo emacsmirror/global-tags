@@ -638,7 +638,8 @@ Calls `global-tags--async-create-database' underneath"
 (defun global-tags-create-database-in-background (directory)
   "Create tags database at DIRECTORY.
 
-Returns immediately.  The database is created in the background.
+Returns a running async-future immediately.
+The database is created in the background.
 
 Any opened buffers under this directory will point to the newly created db."
   (interactive "DCreate database at: ")
