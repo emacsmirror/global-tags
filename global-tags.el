@@ -645,7 +645,8 @@ Any opened buffers under this directory will point to the newly created db."
   (interactive "DCreate database at: ")
   (let ((reporter
          (make-progress-reporter
-          (format "Generating global tags database at %s …")
+          (format "Generating global tags database at %s …"
+                  directory)
           0 1)))
     (global-tags--async-create-database
      directory
