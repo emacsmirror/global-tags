@@ -295,6 +295,30 @@ See `global-gtags--create-temporary-mock-project'")
            :to-equal
            (f-join global-tmp-project-directory "main.h")))))))
 
+(describe "async create db background (1922452)"
+  (before-each
+    ;; create project, but don't setup a database
+    (thread-last
+        (make-temp-file
+         "global-unit-test-mock-project"
+         t)
+      (setq global-tmp-project-directory)
+      (global-tags--create-mock-project)))
+  (after-each
+    (delete-directory global-tmp-project-directory t))
+  (it "create database async-ly"
+    (let* ((default-directory global-tmp-project-directory)
+           (project-find-functions '(global-tags-try-project-root))
+           (db-future
+            (global-tags-create-database-in-background
+             default-directory)))
+      (while (not (async-ready db-future))
+        (accept-process-output
+         ;;db-future
+         ))
+      (expect (project-root)
+              :not :to-be nil))))
+
 (defun global-tags--create-mock-project (project-path)
   "Create mock project on PROJECT-PATH.
 
