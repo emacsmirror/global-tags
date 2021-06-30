@@ -601,22 +601,23 @@ Requires BUFFER to have a file name (path to file exists)."
 
 ;;; creating database
 (cl-defun global-tags--async-create-database (directory then)
-  "Lanuches command to create db at directory, call THEN with returned code.
+  "Lanuches command to create db at DIRECTORY, call THEN with returned code.
 
 THEN is passed as finish-func to `async-start'
 
 Returns async future."
-  (async-start
-   `(lambda ()
-      (let ((default-directory ,directory)
-            (tramp-use-ssh-controlmaster-options nil)) ;; avoid race conditions
-        (process-file
-         ,@(append
-            (list
-             global-tags-generate-tags-command
-             nil nil nil)
-            global-tags-generate-tags-flags))))
-   then))
+  (let ((default-directory directory))
+    (async-start
+     `(lambda ()
+        (let ((default-directory ,default-directory)
+              (tramp-use-ssh-controlmaster-options nil)) ;; avoid race conditions
+          (process-file
+           ,@(append
+              (list
+               global-tags-generate-tags-command
+               nil nil nil)
+              global-tags-generate-tags-flags))))
+     then)))
 
 (defun global-tags-create-database (directory)
   "Create database at DIRECTORY.
