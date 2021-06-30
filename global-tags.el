@@ -722,5 +722,15 @@ Any opened buffers under this directory will point to the newly created db."
     (remove-hook 'after-save-hook
                  #'global-tags-update-database-with-buffer))))
 
+(define-minor-mode global-tags-imenu-mode
+  "Use GNU Global as backend for imenu."
+  :global nil
+  :lighter " iG"
+  (cond
+   (global-tags-imenu-mode
+    (error "WIP"))
+   (t
+    (error "WIP"))))
+
 (provide 'global-tags)
 ;;; global-tags.el ends here
