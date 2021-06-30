@@ -61,7 +61,7 @@
 
 
 ;;; Static definitions
-(defgroup global-tags nil "GNU global integration"
+(defgroup global-tags nil "GNU global integration."
   :group 'tools)
 
 (require 'async)
@@ -83,19 +83,19 @@
 
 (defcustom global-tags-tags-generation-command
   "gtags"
-  "Name/path to executable to generate tags"
+  "Name/path to executable to generate tags."
   :type 'string
   :group 'global-tags)
 
 (defcustom global-tags-generate-tags-command
   "gtags"
-  "Name/path to executable to generate tags"
+  "Name/path to executable to generate tags."
   :type 'string
   :group 'global-tags)
 
 (defcustom global-tags-generate-tags-flags
   '()
-  "command-line flags to `global-tags-tags-generation-command'"
+  "Command-line flags to `global-tags-tags-generation-command'."
   :type '(repeat string)
   :group 'global-tags)
 
@@ -184,7 +184,9 @@ FLAGS must be plist like
 (defun global-tags--ensured-correct-separator (command flags)
   "Return FLAGS with correct separator parameter.
 
-'completion is always separated by \\n.  Everything else is separated by \\0."
+'completion is always separated by \\n.  Everything else is separated by \\0.
+
+Use COMMAND as guide for what separator to use."
   (pcase command
     (`completion
      (delete 'print0 flags))
@@ -193,11 +195,10 @@ FLAGS must be plist like
 
 ;;; Convenience functions (for developers of this package)
 (defun global-tags--line-separator (command)
-  "Get line (candidate) separator chararcter for the command output.
+  "Get line (candidate) separator chararcter for the COMMAND output.
 
 'completion will _always_ be separated by \\n.  The rest is assumed to be
-separated by \\0.
-"
+separated by \\0."
   (pcase command
     (`completion
      "\n")
@@ -216,7 +217,7 @@ Returns a list with (global-binary ARG0 ARG1 …)."
      command-flags))))
 
 (defun global-tags--get-lines-future (command ignore-result &rest command-flags)
-  "Return an `async' future that will hold the returned lines of running COMMAND COMMAND-FLAGS.
+  "Return an `async' future for the returned lines by COMMAND COMMAND-FLAGS.
 
 The future returns (cons return-code list-of-lines)
 
@@ -326,7 +327,8 @@ See `global-tags--get-locations'."
   nil
   "Holds future for root according to global.
 
-This is to prevent tramp from halting GUI, as it pre-fetches the root in the background.
+This is to prevent tramp from halting GUI, as it pre-fetches the root in the
+background.
 
 Value can be nil (not yet set) or an async future.")
 (cl-defun global-tags--ensure-dbpath-future (&optional discard-any-previous)
@@ -347,10 +349,10 @@ Note: uses `default-directory' as «this» in «look for tags in this dir»."
                                                nil))))
 
 
-(cl-defun global-tags--get-dbpath (&optional (dir default-directory))
-  "Filepath for database from DIR."
+(cl-defun global-tags--get-dbpath (&optional (starting-directory default-directory))
+  "Filepath for database from STARTING-DIRECTORY."
   (when-let* ((maybe-dbpath
-               (let ((default-directory dir))
+               (let ((default-directory starting-directory))
                  (if (and global-tags-search-dbpath-in-background
                           global-tags--dbpath-future)
                      ;; try to fetch from future
@@ -359,7 +361,7 @@ Note: uses `default-directory' as «this» in «look for tags in this dir»."
                        (global-tags--ensure-dbpath-future 'discard)
                        (when (and
                               (stringp dbpath))
-                         (if (string-prefix-p dbpath dir)
+                         (if (string-prefix-p dbpath starting-directory)
                              dbpath
                            ;; found a dbpath, but has nothing to do with dir
                            ;; search manually, but don't use pre-fetched
@@ -372,7 +374,7 @@ Note: uses `default-directory' as «this» in «look for tags in this dir»."
               (trimmed-dbpath (substring maybe-dbpath 0
                                          (- (length maybe-dbpath) 1)))
               (dbpath (concat
-                       (file-remote-p dir) ;; add remote file prefix when dir is remote
+                       (file-remote-p starting-directory) ;; add remote file prefix when dir is remote
                        trimmed-dbpath)))
     (if (file-exists-p dbpath)
         dbpath)))
@@ -380,7 +382,9 @@ Note: uses `default-directory' as «this» in «look for tags in this dir»."
 ;;; project.el integration
 ;;;; utilities
 (defun global-tags--remote-file-names (local-files)
-  "Like `project--remote-file-names', but without having to require Emacs 27."
+  "Like `project--remote-file-names', but without having to require Emacs 27.
+
+LOCAL-FILES is files local to the (maybe remote) host"
   (let ((remote-prefix
          (file-remote-p default-directory)))
     (seq-map
@@ -420,14 +424,18 @@ Root is path returned by `global-tags--get-dbpath'.  Lines future is returned by
 `global-tags--get-lines-future'")
 
 (defun global-tags--pre-fetch-key (project command args)
-  "Get a key for `global-tags--pre-fetching-futures'."
+  "Get a key for `global-tags--pre-fetching-futures'.
+
+Use PROJECT from `project-root', global COMMAND ARGS as input as key."
   (cons
    (project-root project)
    (append (list command)
            args)))
 
 (defun global-tags--queue-next (project command args)
-  "Always set next future for arguments."
+  "Always set next future for arguments.
+
+Use PROJECT COMMAND ARGS as key for cache.  See `global-tags--pre-fetch-key'."
   (ht-set
    global-tags--pre-fetching-futures
    (global-tags--pre-fetch-key project command args)
@@ -468,7 +476,7 @@ If a future for COMMAND FLAGS was previously queued in
 `global-tags--pre-fetching-futures', it will use that.
 
 Whatever is used, `global-tags--ensure-next-fetch-is-queued' is called to
-(maybe, according to method) ensure the next call for COMMAND FLAGS will be
+\(maybe, according to method) ensure the next call for COMMAND FLAGS will be
 pre-fetched."
   (let* ((this-key
           (global-tags--pre-fetch-key project command flags))
@@ -491,9 +499,9 @@ pre-fetched."
         lines))))
 
 ;;;; connect to API
-(defun global-tags-try-project-root (dir)
-  "Project root for DIR if it exists."
-  (when-let* ((dbpath (global-tags--get-dbpath dir))
+(defun global-tags-try-project-root (from-directory)
+  "Project root for FROM-DIRECTORY if it exists."
+  (when-let* ((dbpath (global-tags--get-dbpath from-directory))
               (project
                (global-tags-project-default-options
                 :root dbpath)))
@@ -680,7 +688,8 @@ Any opened buffers under this directory will point to the newly created db."
 
 (define-minor-mode global-tags-exclusive-backend-mode
   "Use GNU Global as exclusive backend for several Emacs features."
-  nil nil nil
+  :global nil
+  :lighter " Global"
   (cond
    (global-tags-exclusive-backend-mode
     (setq-local xref-backend-functions '(global-tags-xref-backend))
@@ -697,7 +706,8 @@ Any opened buffers under this directory will point to the newly created db."
 
 (define-minor-mode global-tags-shared-backend-mode
   "Use GNU Global as backend for several Emacs features in this buffer."
-  nil nil nil
+  :global nil
+  :lighter " G"
   (cond
    (global-tags-shared-backend-mode
     (add-hook 'xref-backend-functions 'global-tags-xref-backend 80 t)
