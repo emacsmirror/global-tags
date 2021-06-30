@@ -197,7 +197,8 @@ emacs_args=(
     "${rest[@]}"
 )
 
+_EMACS=${EMACS:-emacs}
 # Actually run Emacs.
-debug "Running: emacs ${emacs_args[@]}"
+debug "Running: ${_EMACS} ${emacs_args[@]}"
 
-emacs "${emacs_args[@]}"
+${_EMACS} "${emacs_args[@]}"
