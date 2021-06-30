@@ -296,7 +296,9 @@ See `global-gtags--create-temporary-mock-project'")
            (f-join global-tmp-project-directory "main.h")))))))
 
 (defun global-tags--create-mock-project (project-path)
-  "Create mock project on PROJECT-PATH."
+  "Create mock project on PROJECT-PATH.
+
+Does not create Global database."
   (let* ((default-directory (file-name-as-directory project-path))
          (main-file-path (f-join default-directory "main.c"))
          (main-header-path (f-join default-directory "main.h"))
@@ -327,20 +329,22 @@ int main{
     int local_int;
     called_fun();
     called_fun();
-}")
-         )
+}"))
     (f-write-text main-file-text 'utf-8 main-file-path)
     (f-write-text main-header-text 'utf-8 main-header-path)
-    (global-tags-create-database default-directory)))
-
-
+    default-directory))
 
 (defun global-gtags--create-temporary-mock-project ()
-  "Create temporary mock project and return its path."
-  (let ((this-global-tmp-project-directory (make-temp-file
-                                            "global-unit-test-mock-project"
-                                            t)))
+  "Create temporary mock project and return its path.
+
+Creates a Global database"
+  (let* ((this-global-tmp-project-directory
+          (make-temp-file
+           "global-unit-test-mock-project"
+           t)))
+
     (global-tags--create-mock-project this-global-tmp-project-directory)
+    (global-tags-create-database this-global-tmp-project-directory)
     this-global-tmp-project-directory))
 
 
