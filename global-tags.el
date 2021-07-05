@@ -722,15 +722,52 @@ Any opened buffers under this directory will point to the newly created db."
     (remove-hook 'after-save-hook
                  #'global-tags-update-database-with-buffer))))
 
+;;; imenu
+(defun global-tags--file-tag-to-imenu-index (line)
+  "Parse output LINE into imenu index."
+  (let* ((matching
+          (s-match (rx
+                    line-start
+                    (group ;; name
+                     (+ (not (any digit))))
+                    (group ;; line number
+                     (+ (any digit)))
+                    (*
+                     (any space))
+                    (group ;; file name
+                     (+ (not (any space))))
+                    (group ;; line definition
+                     (* anychar )))
+                   (s-trim
+                    line))))
+    (pcase-let* ((`(,_m ,name ,line-number ,_file-name ,_line-def)
+                  matching))
+      (cons (s-trim name)
+            (save-excursion
+              (goto-line
+               (string-to-number line-number))
+              (point))))))
+
+(defun global-tags-create-imenu-index ()
+  "Create imenu index from tags of current file."
+  (if-let* ((b-fname
+             (buffer-file-name)))
+      (thread-last b-fname
+        (global-tags--get-lines 'file)
+        (seq-map #'global-tags--file-tag-to-imenu-index))
+    (error "Cannot create imenu index for buffer with no file name")))
+
 (define-minor-mode global-tags-imenu-mode
   "Use GNU Global as backend for imenu."
   :global nil
   :lighter " iG"
   (cond
    (global-tags-imenu-mode
-    (error "WIP"))
+    (setq-local imenu-create-index-function
+                #'global-tags-create-imenu-index))
    (t
-    (error "WIP"))))
+    (setq-local imenu-create-index-function
+                (default-value 'imenu-create-index-function)))))
 
 (provide 'global-tags)
 ;;; global-tags.el ends here
