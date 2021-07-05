@@ -15,6 +15,7 @@
 === Features
 
 * Navigate files using project.el
+* Navigate tags for current files with Imenu
 * Search for tags using xref
 * Do-what-I-mean: search either a symbol under cursor or header file under cursor (inside a `#include`)
 * Pre-fetch results (list files, list tags, database location) for a snappier experience.
@@ -29,6 +30,8 @@ You can setup using GNU global as backend with any of the following two lines:
 (add-hook 'ruby-mode-hook #'global-tags-exclusive-backend-mode)
 ;; to use GNU Global automagically, respecting other backends
 (add-hook 'ruby-mode-hook #'global-tags-shared-backend-mode)
+;; configure Imenu
+(add-hook 'ruby-mode-hook #'global-tags-imenu-mode)
 ----
 
 Alternatively, you can manually configure project.el and xref.el, add their
