@@ -133,7 +133,10 @@ Helps preventing tramp halting because of IO."
 (defun global-tags--command-flag (command)
   "Get command line flag for COMMAND as string-or-nil.
 
-Flags are not contracted.  Returned as list to compose command."
+Flags are not contracted.  Returned as list to compose command.
+
+Note: use 'tag for querying for tags in a file… this lib is designed to
+_always_ have a command (no implicit commands) to keep things simple."
   (pcase command
     (`tag nil)
     ((or `completion `file `grep `idutils `path `print-dbpath `reference `update)
