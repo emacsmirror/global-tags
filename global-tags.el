@@ -767,7 +767,8 @@ Any opened buffers under this directory will point to the newly created db."
              (buffer-file-name)))
       (seq-map
        #'global-tags--file-tag-to-imenu-index
-       (global-tags--get-lines 'file b-fname))
+       (global-tags--get-lines 'file
+                               (file-local-name b-fname)))
     (error "Cannot create imenu index for buffer with no file name")))
 
 ;;;###autoload
