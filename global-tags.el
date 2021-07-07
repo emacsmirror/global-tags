@@ -762,9 +762,9 @@ Any opened buffers under this directory will point to the newly created db."
   "Create imenu index from tags of current file."
   (if-let* ((b-fname
              (buffer-file-name)))
-      (thread-last b-fname
-        (global-tags--get-lines 'file)
-        (seq-map #'global-tags--file-tag-to-imenu-index))
+      (seq-map
+       #'global-tags--file-tag-to-imenu-index
+       (global-tags--get-lines 'file b-fname))
     (error "Cannot create imenu index for buffer with no file name")))
 
 ;;;###autoload
