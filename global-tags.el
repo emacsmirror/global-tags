@@ -501,6 +501,8 @@ pre-fetched."
         lines))))
 
 ;;;; connect to API
+
+;;;###autoload
 (defun global-tags-try-project-root (from-directory)
   "Project root for FROM-DIRECTORY if it exists."
   (when-let* ((dbpath (global-tags--get-dbpath from-directory))
@@ -546,6 +548,8 @@ _DIRS is ignored."
          (match-string 1))))
 
 ;;;; API
+
+;;;###autoload
 (defun global-tags-xref-backend ()
   "Xref backend for using global.
 
@@ -629,6 +633,7 @@ Returns async future."
               global-tags-generate-tags-flags))))
      then)))
 
+;;;###autoload
 (defun global-tags-create-database (directory)
   "Create database at DIRECTORY.
 
@@ -681,6 +686,7 @@ Any opened buffers under this directory will point to the newly created db."
   (unless (global-tags--get-dbpath)
     (call-interactively #'global-tags-create-database)))
 
+;;;###autoload
 (cl-defun global-tags-update-database ()
   "Calls «global --update» in the background."
   (interactive)
@@ -688,6 +694,7 @@ Any opened buffers under this directory will point to the newly created db."
                                  t ;; ignore result
                                  ))
 
+;;;###autoload
 (define-minor-mode global-tags-exclusive-backend-mode
   "Use GNU Global as exclusive backend for several Emacs features."
   :global nil
@@ -706,6 +713,7 @@ Any opened buffers under this directory will point to the newly created db."
     (remove-hook 'after-save-hook
                  #'global-tags-update-database-with-buffer))))
 
+;;;###autoload
 (define-minor-mode global-tags-shared-backend-mode
   "Use GNU Global as backend for several Emacs features in this buffer."
   :global nil
@@ -759,6 +767,7 @@ Any opened buffers under this directory will point to the newly created db."
         (seq-map #'global-tags--file-tag-to-imenu-index))
     (error "Cannot create imenu index for buffer with no file name")))
 
+;;;###autoload
 (define-minor-mode global-tags-imenu-mode
   "Use GNU Global as backend for imenu."
   :global nil
