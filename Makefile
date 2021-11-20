@@ -20,11 +20,14 @@ lint:
 	    -f package-lint-batch-and-exit \
 	    global-tags.el
 
-bytec:
+objects := $(patsubst %.el,%.elc,$(wildcard *.el))
+
+bytec: $(objects)
 	LC_ALL=C ./semacs \
 	    --no-package --no-refresh-packages --no-org-repo -- \
+	    -l tests/setup.el \
 	    --eval '(setq byte-compile-error-on-warn t)' \
-	    --eval '(byte-recompile-directory "./")'
+	    -f batch-byte-compile *.el
 
 
 .PHONY:	all lint test
