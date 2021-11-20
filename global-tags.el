@@ -72,6 +72,7 @@
 (require 'ht)
 (require 'project)
 (require 'rx)
+(require 's)
 (require 'subr-x)
 (require 'xref)
 
@@ -451,7 +452,7 @@ Use PROJECT COMMAND ARGS as key for cache.  See `global-tags--pre-fetch-key'."
 
 (cl-defgeneric global-tags--ensure-next-fetch-is-queued (project command args)
   "Queue next future only on selected (defmethod) parameters.")
-(cl-defmethod global-tags--ensure-next-fetch-is-queued ((project global-tags-project) command args)
+(cl-defmethod global-tags--ensure-next-fetch-is-queued ((_project global-tags-project) _command _args)
   "Don't queue any «next fetch»")
 
 (defconst global-tags--commands-and-args-that-allow-prefetch
@@ -756,20 +757,23 @@ Any opened buffers under this directory will point to the newly created db."
     (pcase-let* ((`(,_m ,name ,line-number ,_file-name ,_line-def)
                   matching))
       (cons (s-trim name)
-            (save-excursion
-              (goto-line
-               (string-to-number line-number))
-              (point))))))
+	    (save-restriction
+	      (widen)
+              (save-excursion
+		(goto-char (point-min))
+		(forward-line
+		 (string-to-number line-number))
+		(point)))))))
 
 (defun global-tags-create-imenu-index ()
   "Create imenu index from tags of current file."
   (if-let* ((b-fname
              (buffer-file-name)))
-      (seq-map
-       #'global-tags--file-tag-to-imenu-index
-       (global-tags--get-lines 'file
-                               (file-local-name b-fname)))
-    (error "Cannot create imenu index for buffer with no file name")))
+	   (seq-map
+	    #'global-tags--file-tag-to-imenu-index
+	    (global-tags--get-lines 'file
+				    (file-local-name b-fname)))
+	   (error "Cannot create imenu index for buffer with no file name")))
 
 ;;;###autoload
 (define-minor-mode global-tags-imenu-mode
